@@ -76,7 +76,7 @@ python sample.py \
 
 ## Pre-trained Model Details 🔍
 
-The provided checkpoint was trained on the TinyStories dataset.
+The provided checkpoint was trained on the [TinyStories](https://huggingface.co/datasets/roneneldan/TinyStories) dataset.
 
 Architecture:
 - 4096-token vocabulary
