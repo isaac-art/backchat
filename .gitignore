@@ -1,2 +1,10 @@
 __pycache__
 out/
+
+# ignore pt pth files etc
+*.pt
+*.pth
+*.model
+*.vocab
+*.npy
+

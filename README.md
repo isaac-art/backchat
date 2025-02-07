@@ -8,6 +8,8 @@ this is an experiment built on a fork of [smol-gpt](https://github.com/Om-Alve/s
 1. **Download Assets**
 ```bash
 # Download tokenizer
+# The tokenizer vocab size is 4096
+# The file size is 
 TODO TODO TODO
 # wget https://huggingface.co/isaac-art/backgpt/resolve/main/tok4096.model -P data/
 
@@ -40,7 +42,7 @@ Architecture:
 - 512 embedding dimension
 - Trained for ~4 hours on L40 48GBVRAM - 18 vCPU 251GB RAM
 
-To a Validation Loss of `1.0491`
+To a Validation Loss of `~1.2`
 
 ![Loss Curve](assets/loss1.png)
 
