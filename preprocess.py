@@ -77,6 +77,11 @@ def train_vocab(vocab_size: int) -> None:
     )
 
 
+def reverse_sentence(text: str) -> str:
+    """Reverse the order of words in a sentence while maintaining word integrity."""
+    return " ".join(text.strip().split()[::-1])
+
+
 def process_shard(args: tuple, vocab_size: int) -> None:
     shard_id, shard = args
     tokenizer_model = DATA_CACHE_DIR / f"tok{vocab_size}.model"
@@ -88,7 +93,9 @@ def process_shard(args: tuple, vocab_size: int) -> None:
     all_tokens = []
     for example in tqdm(data, position=shard_id):
         text = example["story"].strip()
-        tokens = tokenizer.encode(text, bos=True, eos=True)
+        # Reverse each sentence before tokenization
+        reversed_text = reverse_sentence(text)
+        tokens = tokenizer.encode(reversed_text, bos=True, eos=True)
         all_tokens.extend(tokens)
 
     all_tokens = np.array(all_tokens, dtype=np.uint16)
