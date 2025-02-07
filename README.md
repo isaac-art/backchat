@@ -42,7 +42,7 @@ Architecture:
 
 To a Validation Loss of `1.0491`
 
-![Loss Curve](assets/loss.png)
+![Loss Curve](assets/loss1.png)
 
 
 ![Config](assets/config.png)
