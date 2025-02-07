@@ -44,7 +44,7 @@ def download() -> None:
     if not data_dir.exists():
         data_dir.mkdir(exist_ok=True)
         print("Extracting TinyStories dataset...")
-        os.system(f"tar -xvf {data_filename} -C {data_dir}")
+        os.system(f"tar --no-same-owner -xvf {data_filename} -C {data_dir}")
 
 
 def train_vocab(vocab_size: int) -> None:

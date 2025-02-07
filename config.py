@@ -4,19 +4,19 @@ import torch
 
 @dataclass
 class GPTConfig:
-    block_size: int = 2048
+    block_size: int = 1024
     vocab_size: int = 4096
-    n_layer: int = 24
-    n_head: int = 16
-    n_embed: int = 1024
-    dropout: float = 0.1
+    n_layer: int = 8
+    n_head: int = 8
+    n_embed: int = 512
+    dropout: float = 0.15
     bias: bool = False
     use_rotary: bool = True
 
 
 @dataclass
 class TrainingConfig:
-    learning_rate: float = 3e-4
+    learning_rate: float = 6e-4
     max_iters: int = 50000
     weight_decay: float = 1e-1
     beta1: float = 0.9
@@ -26,13 +26,13 @@ class TrainingConfig:
     decay_lr: bool = True
     warmup_iters: int = 2000
     lr_decay_iters: int = 50000
-    min_lr: float = 3e-5
+    min_lr: float = 6e-5
 
     eval_interval: int = 100
     log_interval: int = 10
     eval_iters: int = 200
-    gradient_accumulation_steps: int = 2
-    batch_size: int = 128
+    gradient_accumulation_steps: int = 4
+    batch_size: int = 96
 
     device: str = str(torch.device("cuda" if torch.cuda.is_available() else "cpu"))
     dtype: str = "bfloat16"

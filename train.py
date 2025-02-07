@@ -202,14 +202,19 @@ while True:
         print(f"GPU Memory: {allocated:.2f}GB allocated, {reserved:.2f}GB reserved")
 
         # Log to wandb
-        wandb.log({
+        wandb_metrics = {
             "train/loss": losses["train"],
             "val/loss": losses["val"],
             "train/lr": lr,
             "system/gpu_memory_allocated": allocated,
             "system/gpu_memory_reserved": reserved,
-            "system/iteration_time_ms": dt * 1000,
-        }, step=iter_num)
+        }
+        
+        # Only add timing after first iteration
+        if iter_num > 0:
+            wandb_metrics["system/iteration_time_ms"] = dt * 1000
+            
+        wandb.log(wandb_metrics, step=iter_num)
 
         # Save checkpoint every 2 hours (7200 seconds)
         current_time = time.time()
