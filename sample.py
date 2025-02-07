@@ -104,6 +104,7 @@ def load_model(args):
 
 def main():
     args = parse_args()
+    args.device = "cpu"
     ctx = setup_device(args)
     model = load_model(args)
 
