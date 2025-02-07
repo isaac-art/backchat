@@ -8,10 +8,14 @@ this is an experiment built on a fork of [smol-gpt](https://github.com/Om-Alve/s
 1. **Download Assets**
 ```bash
 # Download tokenizer
-wget https://huggingface.co/OmAlve/TinyStories-SmolGPT/resolve/main/tok4096.model -P data/
+TODO TODO TODO
+# wget https://huggingface.co/isaac-art/backgpt/resolve/main/tok4096.model -P data/
 
 # Download pre-trained checkpoint
-wget https://huggingface.co/OmAlve/TinyStories-SmolGPT/resolve/main/ckpt.pt -P out/
+TODO TODO TODO
+# wget https://huggingface.co/isaac-art/backgpt/resolve/main/ckpt.pt -P out/
+# 
+
 ```
 
 2. **Run Inference**
