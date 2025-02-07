@@ -44,6 +44,8 @@ To a Validation Loss of `1.0491`
 
 ![Loss Curve](assets/loss.png)
 
+
+![Config](assets/config.png)
 ## Sample Outputs 📝
 
 ### Example 1
