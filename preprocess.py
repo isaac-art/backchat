@@ -202,24 +202,35 @@ def prepare_dataset(vocab_size: int, dataset: str = "tiny") -> None:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Process dataset")
-    parser.add_argument(
+    subparsers = parser.add_subparsers(dest="command", help="Available commands")
+
+    # Download command
+    download_parser = subparsers.add_parser(
+        "download", help="Download dataset"
+    )
+    download_parser.add_argument(
         "--dataset",
         choices=["tiny", "owt2"],
         default="tiny",
         help="Dataset to process (default: tiny)"
     )
-    
-    subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
-    download_parser = subparsers.add_parser(
-        "download", help="Download dataset"
-    )
-
+    # Train vocab command
     vocab_parser = subparsers.add_parser("train-vocab", help="Train vocabulary")
     vocab_parser.add_argument(
-        "--vocab-size", type=int, required=True, help="Size of vocabulary to train"
+        "--vocab-size", 
+        type=int, 
+        required=True, 
+        help="Size of vocabulary to train"
+    )
+    vocab_parser.add_argument(
+        "--dataset",
+        choices=["tiny", "owt2"],
+        default="tiny",
+        help="Dataset to process (default: tiny)"
     )
 
+    # Pretokenize command
     pretok_parser = subparsers.add_parser("pretokenize", help="Pretokenize the dataset")
     pretok_parser.add_argument(
         "--vocab-size",
@@ -227,7 +238,14 @@ if __name__ == "__main__":
         required=True,
         help="Vocabulary size to use for tokenization",
     )
+    pretok_parser.add_argument(
+        "--dataset",
+        choices=["tiny", "owt2"],
+        default="tiny",
+        help="Dataset to process (default: tiny)"
+    )
 
+    # Prepare dataset command
     prepare_parser = subparsers.add_parser(
         "prepare-dataset", help="Run all dataset preparation steps sequentially"
     )
@@ -236,6 +254,12 @@ if __name__ == "__main__":
         type=int,
         required=True,
         help="Vocabulary size for training and tokenization",
+    )
+    prepare_parser.add_argument(
+        "--dataset",
+        choices=["tiny", "owt2"],
+        default="tiny",
+        help="Dataset to process (default: tiny)"
     )
 
     args = parser.parse_args()
@@ -250,3 +274,4 @@ if __name__ == "__main__":
         prepare_dataset(args.vocab_size, args.dataset)
     else:
         parser.print_help()
+
