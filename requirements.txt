@@ -7,3 +7,4 @@ tqdm==4.67.1
 wandb
 zstandard
 jsonlines
+datasets

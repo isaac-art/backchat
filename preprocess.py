@@ -28,10 +28,10 @@ DATASETS = {
         "url": "https://huggingface.co/datasets/roneneldan/TinyStories/resolve/main/TinyStories_all_data.tar.gz",
         "dir": DATA_CACHE_DIR / "TinyStories_all_data",
     },
-    "owt2": {
-        "name": "OpenWebText2",
-        "url": "https://mystic.the-eye.eu/public/AI/pile_preliminary_components/openwebtext2.jsonl.zst.tar",
-        "dir": DATA_CACHE_DIR / "openwebtext2",
+    "fineweb": {
+        "name": "Fineweb",
+        "url": "https://huggingface.co/datasets/HuggingFaceFW/fineweb",
+        "dir": DATA_CACHE_DIR / "fineweb",
     }
 }
 
@@ -62,18 +62,45 @@ def download(dataset: str = "tiny") -> None:
             config['dir'].mkdir(exist_ok=True)
             print(f"Extracting {config['name']} dataset...")
             os.system(f"tar --no-same-owner -xvf {data_filename} -C {config['dir']}")
-    else:  # owt2
-        data_filename = DATA_CACHE_DIR / "openwebtext2.tar"
-        config['dir'].mkdir(exist_ok=True)
-        
-        if not data_filename.exists():
+    else:  # fineweb
+        try:
+            import datasets
             print(f"Downloading {config['name']} dataset...")
-            download_file(config['url'], str(data_filename))
+            config['dir'].mkdir(exist_ok=True)
             
-        if not any(config['dir'].glob("*.jsonl.zst")):
-            print(f"Extracting {config['name']} dataset...")
-            with tarfile.open(data_filename) as tar:
-                tar.extractall(path=config['dir'])
+            # Load dataset in streaming mode to handle large size
+            ds = datasets.load_dataset(
+                "HuggingFaceFW/fineweb",
+                streaming=True,
+                split="train"
+            )
+            
+            # Save in chunks of 10k examples
+            chunk_size = 10000
+            current_chunk = []
+            chunk_idx = 0
+            
+            print("Processing Fineweb dataset...")
+            for item in tqdm(ds):
+                if item.get('text'):
+                    current_chunk.append(item['text'])
+                    
+                if len(current_chunk) >= chunk_size:
+                    chunk_path = config['dir'] / f"chunk_{chunk_idx:05d}.txt"
+                    with open(chunk_path, 'w', encoding='utf-8') as f:
+                        f.write('\n'.join(current_chunk))
+                    current_chunk = []
+                    chunk_idx += 1
+            
+            # Save any remaining examples
+            if current_chunk:
+                chunk_path = config['dir'] / f"chunk_{chunk_idx:05d}.txt"
+                with open(chunk_path, 'w', encoding='utf-8') as f:
+                    f.write('\n'.join(current_chunk))
+                    
+        except Exception as e:
+            print(f"Error downloading Fineweb dataset: {e}")
+            raise
 
 def get_dataset_stats(dataset_dir: Path) -> tuple[int, float]:
     """Get document count and total text size in GB for the dataset."""
@@ -102,16 +129,16 @@ def train_vocab(vocab_size: int, dataset: str = "tiny") -> None:
                     data = json.load(g)
                 for example in data:
                     f.write(example["story"].strip() + "\n")
-        else:  # owt2
-            reader = Reader()
-            shard_filenames = sorted(glob.glob(str(config['dir'] / "*.jsonl.zst")))
+        else:  # fineweb
+            chunk_files = sorted(glob.glob(str(config['dir'] / "chunk_*.txt")))
             count = 0
-            for shard in shard_filenames[:2]:  # Use first 2 shards for vocab training
-                for text, _ in reader.read_jsonl(shard):
-                    f.write(text + "\n")
-                    count += 1
-                    if count >= 100000:  # Sample 100k examples for vocab training
-                        break
+            for chunk_file in chunk_files[:5]:  # Use first 5 chunks for vocab training
+                with open(chunk_file, 'r', encoding='utf-8') as g:
+                    for line in g:
+                        f.write(line.strip() + "\n")
+                        count += 1
+                        if count >= 100000:  # Sample 100k examples for vocab training
+                            break
                 if count >= 100000:
                     break
 
@@ -154,29 +181,31 @@ def process_shard(args: tuple, vocab_size: int, dataset: str = "tiny") -> None:
         tokenized_filename = str(shard).replace(".json", ".bin")
         with open(tokenized_filename, "wb") as f:
             f.write(all_tokens.tobytes())
-    else:  # owt2
-        reader = Reader()
-        for text, _ in tqdm(reader.read_jsonl(shard), position=shard_id, desc=f"Processing {Path(shard).name}"):
-            reversed_text = reverse_sentence(text)
-            tokens = tokenizer.encode(reversed_text, bos=True, eos=True)
-            all_tokens.extend(tokens)
+    else:  # fineweb
+        with open(shard, 'r', encoding='utf-8') as f:
+            for line in tqdm(f, position=shard_id, desc=f"Processing {Path(shard).name}"):
+                text = line.strip()
+                if text:  # Skip empty lines
+                    reversed_text = reverse_sentence(text)
+                    tokens = tokenizer.encode(reversed_text, bos=True, eos=True)
+                    all_tokens.extend(tokens)
 
-            if len(all_tokens) > 1_000_000:
-                tokens_array = np.array(all_tokens, dtype=np.uint16)
-                tokenized_filename = str(shard).replace(".jsonl.zst", f"_{len(all_tokens)}.bin")
-                with open(tokenized_filename, "wb") as f:
-                    f.write(tokens_array.tobytes())
-                all_tokens = []
+                if len(all_tokens) > 1_000_000:
+                    tokens_array = np.array(all_tokens, dtype=np.uint16)
+                    tokenized_filename = str(shard).replace(".txt", f"_{len(all_tokens)}.bin")
+                    with open(tokenized_filename, "wb") as f:
+                        f.write(tokens_array.tobytes())
+                    all_tokens = []
 
         if all_tokens:
             tokens_array = np.array(all_tokens, dtype=np.uint16)
-            tokenized_filename = str(shard).replace(".jsonl.zst", f"_{len(all_tokens)}.bin")
+            tokenized_filename = str(shard).replace(".txt", f"_{len(all_tokens)}.bin")
             with open(tokenized_filename, "wb") as f:
                 f.write(tokens_array.tobytes())
 
 def pretokenize(vocab_size: int, dataset: str = "tiny") -> None:
     config = DATASETS[dataset]
-    pattern = "*.json" if dataset == "tiny" else "*.jsonl.zst"
+    pattern = "*.json" if dataset == "tiny" else "chunk_*.txt"
     shard_filenames = sorted(glob.glob(str(config['dir'] / pattern)))
 
     func = partial(process_shard, vocab_size=vocab_size, dataset=dataset)
@@ -188,7 +217,7 @@ def prepare_dataset(vocab_size: int, dataset: str = "tiny") -> None:
     print(f"Step 1: Downloading {config['name']} dataset...")
     download(dataset)
     
-    if dataset == "owt2":
+    if dataset == "fineweb":
         print("\nCalculating dataset statistics...")
         doc_count, size_gb = get_dataset_stats(config['dir'])
         print(f"Total documents: {doc_count:,}")
@@ -210,7 +239,7 @@ if __name__ == "__main__":
     )
     download_parser.add_argument(
         "--dataset",
-        choices=["tiny", "owt2"],
+        choices=["tiny", "fineweb"],
         default="tiny",
         help="Dataset to process (default: tiny)"
     )
@@ -225,7 +254,7 @@ if __name__ == "__main__":
     )
     vocab_parser.add_argument(
         "--dataset",
-        choices=["tiny", "owt2"],
+        choices=["tiny", "fineweb"],
         default="tiny",
         help="Dataset to process (default: tiny)"
     )
@@ -240,7 +269,7 @@ if __name__ == "__main__":
     )
     pretok_parser.add_argument(
         "--dataset",
-        choices=["tiny", "owt2"],
+        choices=["tiny", "fineweb"],
         default="tiny",
         help="Dataset to process (default: tiny)"
     )
@@ -257,7 +286,7 @@ if __name__ == "__main__":
     )
     prepare_parser.add_argument(
         "--dataset",
-        choices=["tiny", "owt2"],
+        choices=["tiny", "fineweb"],
         default="tiny",
         help="Dataset to process (default: tiny)"
     )
