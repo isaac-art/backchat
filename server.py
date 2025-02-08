@@ -8,6 +8,7 @@ import asyncio
 from model import GPT
 from config import GPTConfig
 from tokenizer import Tokenizer
+from contextlib import nullcontext
 
 app = FastAPI()
 
@@ -15,13 +16,39 @@ app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
+# Determine device
+if torch.cuda.is_available():
+    DEVICE = "cuda"
+elif torch.backends.mps.is_available():
+    DEVICE = "mps"
+else:
+    DEVICE = "cpu"
+
+# Setup context manager for the device
+if DEVICE == "cuda":
+    CTX = torch.autocast(DEVICE, dtype=torch.bfloat16)
+elif DEVICE == "mps":
+    CTX = nullcontext()  # No autocast for MPS
+else:
+    CTX = torch.autocast("cpu", dtype=torch.bfloat16)
+
 # Load model and tokenizer
 def load_model():
-    checkpoint = torch.load("out/best_checkpoint.pt", map_location="cuda")
+    print(f"Loading model on {DEVICE}...")
+    load_device = 'cpu' if DEVICE == 'mps' else DEVICE
+    checkpoint = torch.load("out/checkpoints/best_checkpoint.pt", map_location=load_device)
     model_config = GPTConfig(**checkpoint["model_args"])
     model = GPT(model_config)
-    model.load_state_dict(checkpoint["model"])
-    model.to("cuda")
+
+    # Handle _orig_mod prefix in state dict
+    state_dict = checkpoint["model"]
+    unwanted_prefix = "_orig_mod."
+    for k, v in list(state_dict.items()):
+        if k.startswith(unwanted_prefix):
+            state_dict[k[len(unwanted_prefix):]] = state_dict.pop(k)
+            
+    model.load_state_dict(state_dict)
+    model.to(DEVICE)
     model.eval()
     return model
 
@@ -47,17 +74,18 @@ async def chat_stream(request: Request):
         
         # Encode the reversed input
         input_ids = tokenizer.encode(reversed_input, bos=True, eos=False)
-        x = torch.tensor(input_ids, dtype=torch.long, device="cuda").unsqueeze(0)
+        x = torch.tensor(input_ids, dtype=torch.long, device=DEVICE).unsqueeze(0)
         
         # Generate until EOS or max length (safety limit)
         max_new_tokens = 200  # Increased safety limit
         
         for _ in range(max_new_tokens):
             with torch.no_grad():
-                logits, _ = model(x)
-                logits = logits[:, -1, :] / 0.7  # temperature
-                probs = torch.softmax(logits, dim=-1)
-                next_token = torch.multinomial(probs, num_samples=1)
+                with CTX:
+                    logits, _ = model(x)
+                    logits = logits[:, -1, :] / 0.7  # temperature
+                    probs = torch.softmax(logits, dim=-1)
+                    next_token = torch.multinomial(probs, num_samples=1)
                 
                 # Break if we hit the EOS token
                 if next_token.item() == tokenizer.eos_id:

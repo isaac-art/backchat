@@ -8,6 +8,18 @@ import torch
 from torch.utils.tensorboard.writer import SummaryWriter
 from dataset import Task
 import wandb
+import argparse
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--dataset", type=str, default="tiny", choices=["tiny", "owt2"])
+    return parser.parse_args()
+
+args = parse_args()
+dataset = args.dataset
+
+if dataset == "tiny":
+    GPTConfig.vocab_size = 4096  # Set vocab size for TinyStories
 
 def get_gpu_memory():
     """Get GPU memory usage in GB"""
@@ -27,19 +39,19 @@ def save_checkpoint(model, optimizer, iter_num, best_val_loss, checkpoint_dir, i
     
     # Save checkpoint
     if is_best:
-        checkpoint_path = os.path.join(checkpoint_dir, "best_checkpoint.pt")
+        checkpoint_path = os.path.join(checkpoint_dir, f"best_checkpoint_{dataset}.pt")
         # Log best model to wandb
         wandb.run.summary["best_val_loss"] = best_val_loss
         wandb.run.summary["best_iter"] = iter_num
     else:
-        checkpoint_path = os.path.join(checkpoint_dir, f"checkpoint_{iter_num:07d}.pt")
+        checkpoint_path = os.path.join(checkpoint_dir, f"checkpoint_{dataset}_{iter_num:07d}.pt")
     
     torch.save(checkpoint, checkpoint_path)
     
     # Cleanup old checkpoints - keep only 3 most recent
     if not is_best:
         checkpoints = sorted(
-            [f for f in os.listdir(checkpoint_dir) if f.startswith("checkpoint_")]
+            [f for f in os.listdir(checkpoint_dir) if f.startswith(f"checkpoint_{dataset}_")]
         )
         while len(checkpoints) > 3:
             os.remove(os.path.join(checkpoint_dir, checkpoints[0]))
@@ -47,16 +59,17 @@ def save_checkpoint(model, optimizer, iter_num, best_val_loss, checkpoint_dir, i
 
 train_config = TrainingConfig()
 out_dir = "out/"
-checkpoint_dir = os.path.join(out_dir, "checkpoints")
+checkpoint_dir = os.path.join(out_dir, f"checkpoints_{dataset}")
 os.makedirs(checkpoint_dir, exist_ok=True)
-writer = SummaryWriter(log_dir=os.path.join(out_dir, "logs"))
+writer = SummaryWriter(log_dir=os.path.join(out_dir, f"logs_{dataset}"))
 resume = False
 
-# Initialize wandb
+# Initialize wandb with dataset-specific name
 wandb.init(
     project="backgpt",
     config={
         # Model config
+        "dataset": dataset,
         "n_layer": GPTConfig.n_layer,
         "n_head": GPTConfig.n_head,
         "n_embed": GPTConfig.n_embed,
@@ -72,7 +85,7 @@ wandb.init(
         "grad_clip": train_config.grad_clip,
         "gradient_accumulation_steps": train_config.gradient_accumulation_steps,
     },
-    name=f"backgpt_l{GPTConfig.n_layer}_h{GPTConfig.n_head}_e{GPTConfig.n_embed}",
+    name=f"backgpt_{dataset}_l{GPTConfig.n_layer}_h{GPTConfig.n_head}_e{GPTConfig.n_embed}",
 )
 
 tokens_per_iter = (
@@ -104,6 +117,7 @@ iter_batches = partial(
     batch_size=train_config.batch_size,
     max_seq_len=GPTConfig.block_size,
     device=train_config.device,
+    dataset=dataset,
     num_workers=0,
 )
 

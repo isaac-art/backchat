@@ -5,3 +5,6 @@ tensorboard==2.14.0
 torch==2.4.1
 tqdm==4.67.1
 wandb
+zstandard
+jsonlines
+tarfile

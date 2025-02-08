@@ -5,7 +5,7 @@ import torch
 @dataclass
 class GPTConfig:
     block_size: int = 1024
-    vocab_size: int = None  # Will be set based on dataset
+    vocab_size: int = 4096
     n_layer: int = 8
     n_head: int = 8
     n_embed: int = 512
@@ -13,16 +13,10 @@ class GPTConfig:
     bias: bool = False
     use_rotary: bool = True
 
-    def __post_init__(self):
-        # Set vocab size based on dataset if not explicitly provided
-        if self.vocab_size is None:
-            self.vocab_size = 50257  # Default for OWT2
-
 
 @dataclass
 class TrainingConfig:
-    batch_size: int = 128
-    learning_rate: float = 7e-4
+    learning_rate: float = 6e-4
     max_iters: int = 50000
     weight_decay: float = 1e-1
     beta1: float = 0.9
@@ -32,12 +26,13 @@ class TrainingConfig:
     decay_lr: bool = True
     warmup_iters: int = 2000
     lr_decay_iters: int = 50000
-    min_lr: float = 7e-5
+    min_lr: float = 6e-5
 
     eval_interval: int = 100
     log_interval: int = 10
     eval_iters: int = 200
-    gradient_accumulation_steps: int = 2
+    gradient_accumulation_steps: int = 4
+    batch_size: int = 96
 
     device: str = str(torch.device("cuda" if torch.cuda.is_available() else "cpu"))
     dtype: str = "bfloat16"
