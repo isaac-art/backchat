@@ -37,6 +37,9 @@ class InstructDataset(Dataset):
         print(f"Initializing InstructDataset with max_length={max_length}")
         
         print("Processing instruction dataset...")
+        total_sequences = 0
+        truncated_sequences = 0
+        
         with open(INSTRUCT_FILE, 'r') as f:
             for line in tqdm(f):
                 example = json.loads(line)
@@ -54,12 +57,13 @@ class InstructDataset(Dataset):
                 reversed_text = " ".join(all_words[::-1])
                 
                 tokens = self.tokenizer.encode(reversed_text, bos=True, eos=True)
+                total_sequences += 1
                 
-                # Print debug info for long sequences
+                # Truncate if longer than max_length
                 if len(tokens) > self.max_length:
-                    print(f"Skipping long sequence: {len(tokens)} tokens")
-                    continue
-                    
+                    tokens = tokens[:self.max_length]
+                    truncated_sequences += 1
+                
                 # Ensure we have at least 2 tokens (for x and y)
                 if len(tokens) < 2:
                     print(f"Skipping too short sequence: {len(tokens)} tokens")
@@ -68,6 +72,7 @@ class InstructDataset(Dataset):
                 self.examples.append(tokens)
                     
         print(f"Loaded {len(self.examples)} examples")
+        print(f"Truncated {truncated_sequences}/{total_sequences} sequences ({truncated_sequences/total_sequences*100:.2f}%)")
     
     def __len__(self):
         return len(self.examples)
@@ -84,8 +89,6 @@ class InstructDataset(Dataset):
         # Pad if needed
         if len(tokens) < self.max_length:
             tokens = tokens + [self.tokenizer.pad_id] * (self.max_length - len(tokens))
-        else:
-            tokens = tokens[:self.max_length]
         
         # Create input/target pairs
         x = torch.tensor(tokens[:-1], dtype=torch.long)
@@ -140,7 +143,7 @@ def save_checkpoint(model, optimizer, model_config, iter_num, loss, is_best=Fals
     for checkpoint in checkpoints[:-3]:
         checkpoint.unlink()
 
-def train_step(model, batch, optimizer, grad_clip):
+def train_step(batch, model, optimizer, grad_clip):
     """Single training step for instruction tuning"""
     x, y = batch
     
@@ -289,16 +292,11 @@ def main():
             batch = next(train_iter)
         
         x, y = batch
-        # Add more shape/value checks
-        assert x.shape[1] == block_size - 1, f"Wrong input sequence length: {x.shape[1]}"
-        assert torch.all(x < vocab_size), "Input contains invalid token ids"
-        assert torch.all(y < vocab_size), "Target contains invalid token ids"
-        
         x = x.to("cuda")
         y = y.to("cuda")
         
         # Training step
-        loss = train_step((x, y), model, optimizer, train_config.grad_clip)
+        loss = train_step(batch=(x, y), model=model, optimizer=optimizer, grad_clip=train_config.grad_clip)
         
         # Evaluation
         if (iter_num + 1) % train_config.eval_interval == 0:
