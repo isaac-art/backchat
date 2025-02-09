@@ -54,8 +54,18 @@ class InstructDataset(Dataset):
                 reversed_text = " ".join(all_words[::-1])
                 
                 tokens = self.tokenizer.encode(reversed_text, bos=True, eos=True)
-                if len(tokens) <= self.max_length:
-                    self.examples.append(tokens)
+                
+                # Print debug info for long sequences
+                if len(tokens) > self.max_length:
+                    print(f"Skipping long sequence: {len(tokens)} tokens")
+                    continue
+                    
+                # Ensure we have at least 2 tokens (for x and y)
+                if len(tokens) < 2:
+                    print(f"Skipping too short sequence: {len(tokens)} tokens")
+                    continue
+                
+                self.examples.append(tokens)
                     
         print(f"Loaded {len(self.examples)} examples")
     
@@ -64,17 +74,31 @@ class InstructDataset(Dataset):
     
     def __getitem__(self, idx):
         tokens = self.examples[idx]
+        
+        # Ensure we have enough tokens
+        if len(tokens) < 2:
+            print(f"Warning: sequence {idx} too short: {len(tokens)}")
+            # Pad with at least 2 tokens
+            tokens = tokens + [self.tokenizer.pad_id] * (2 - len(tokens))
+            
+        # Pad if needed
         if len(tokens) < self.max_length:
             tokens = tokens + [self.tokenizer.pad_id] * (self.max_length - len(tokens))
         else:
             tokens = tokens[:self.max_length]
         
+        # Create input/target pairs
         x = torch.tensor(tokens[:-1], dtype=torch.long)
         y = torch.tensor(tokens[1:], dtype=torch.long)
         
-        # Add shape verification
+        # Verify shapes
         assert x.shape[0] == self.max_length - 1, f"Expected x shape {self.max_length-1}, got {x.shape[0]}"
         assert y.shape[0] == self.max_length - 1, f"Expected y shape {self.max_length-1}, got {y.shape[0]}"
+        
+        # Verify values are within vocab size
+        vocab_size = 4096  # From model config
+        assert torch.all(x < vocab_size), f"Input contains token ids >= vocab_size ({vocab_size})"
+        assert torch.all(y < vocab_size), f"Target contains token ids >= vocab_size ({vocab_size})"
         
         return x, y
 
@@ -187,11 +211,22 @@ def main():
     
     # Make sure block_size matches the model's configuration
     block_size = model_args['block_size']
-    print(f"Using block size: {block_size}")
+    vocab_size = model_args['vocab_size']
+    print(f"Using block size: {block_size}, vocab size: {vocab_size}")
+    
+    # Verify tokenizer vocab size matches model
+    assert tokenizer.vocab_size == vocab_size, \
+        f"Tokenizer vocab size ({tokenizer.vocab_size}) doesn't match model ({vocab_size})"
+    
     full_dataset = InstructDataset(tokenizer, max_length=block_size)
     
-    # Print dataset info
-    print(f"Loaded {len(full_dataset)} examples from Dolly dataset")
+    # Verify a few random samples before training
+    print("\nVerifying random samples:")
+    for i in range(3):
+        idx = np.random.randint(len(full_dataset))
+        x, y = full_dataset[idx]
+        print(f"Sample {i} - x shape: {x.shape}, y shape: {y.shape}")
+        print(f"x range: [{x.min()}, {x.max()}], y range: [{y.min()}, {y.max()}]")
     
     # Split into train/val
     train_size = int(0.9 * len(full_dataset))
@@ -243,17 +278,23 @@ def main():
     train_iter = iter(train_loader)
     
     for iter_num in pbar:
-        # Get batch
         try:
             batch = next(train_iter)
         except StopIteration:
             train_iter = iter(train_loader)
             batch = next(train_iter)
         
-        batch = tuple(t.to("cuda") for t in batch)
+        x, y = batch
+        # Add more shape/value checks
+        assert x.shape[1] == block_size - 1, f"Wrong input sequence length: {x.shape[1]}"
+        assert torch.all(x < vocab_size), "Input contains invalid token ids"
+        assert torch.all(y < vocab_size), "Target contains invalid token ids"
+        
+        x = x.to("cuda")
+        y = y.to("cuda")
         
         # Training step
-        loss = train_step(model, batch, optimizer, train_config.grad_clip)
+        loss = train_step((x, y), model, optimizer, train_config.grad_clip)
         
         # Evaluation
         if (iter_num + 1) % train_config.eval_interval == 0:
