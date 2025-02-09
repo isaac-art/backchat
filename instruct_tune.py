@@ -10,6 +10,7 @@ from tokenizer import Tokenizer
 import wandb
 from torch.nn import functional as F
 import numpy as np
+from train import train_step  # Import train_step from the original training script
 
 # Constants
 DOLLY_URL = "https://huggingface.co/datasets/databricks/databricks-dolly-15k/resolve/main/databricks-dolly-15k.jsonl"
