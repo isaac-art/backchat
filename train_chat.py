@@ -57,10 +57,10 @@ def main():
     # Model configuration
     model_config = GPTConfig(
         block_size=1024,
-        vocab_size=32000,  # Larger vocab for chat
-        n_layer=12,
-        n_head=12,
-        n_embed=768,
+        vocab_size=8192,  # Reduced from 32000
+        n_layer=8,        # Reduced from 12
+        n_head=8,         # Reduced from 12
+        n_embed=512,      # Reduced from 768
         dropout=0.1,
         bias=False,
         use_rotary=True
@@ -68,7 +68,7 @@ def main():
     
     # Training configuration
     train_config = TrainingConfig(
-        batch_size=32,
+        batch_size=16,    # Reduced from 32
         learning_rate=6e-4,
         max_iters=50000,
         weight_decay=1e-1,
