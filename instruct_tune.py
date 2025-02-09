@@ -33,12 +33,16 @@ class InstructDataset(Dataset):
         self.tokenizer = tokenizer
         self.max_length = max_length
         self.examples = []
+        self.vocab_size = 4096  # From model config
         
         print(f"Initializing InstructDataset with max_length={max_length}")
+        print(f"Tokenizer pad_id: {self.tokenizer.pad_id}")
+        print(f"Vocabulary size: {self.vocab_size}")
         
         print("Processing instruction dataset...")
         total_sequences = 0
         truncated_sequences = 0
+        invalid_sequences = 0
         
         with open(INSTRUCT_FILE, 'r') as f:
             for line in tqdm(f):
@@ -56,23 +60,39 @@ class InstructDataset(Dataset):
                 all_words = full_text.split()
                 reversed_text = " ".join(all_words[::-1])
                 
-                tokens = self.tokenizer.encode(reversed_text, bos=True, eos=True)
-                total_sequences += 1
-                
-                # Truncate if longer than max_length
-                if len(tokens) > self.max_length:
-                    tokens = tokens[:self.max_length]
-                    truncated_sequences += 1
-                
-                # Ensure we have at least 2 tokens (for x and y)
-                if len(tokens) < 2:
-                    print(f"Skipping too short sequence: {len(tokens)} tokens")
-                    continue
-                
-                self.examples.append(tokens)
+                try:
+                    tokens = self.tokenizer.encode(reversed_text, bos=True, eos=True)
                     
+                    # Validate token IDs
+                    if any(t >= self.vocab_size for t in tokens):
+                        print(f"\nWarning: Found token ID >= vocab_size ({self.vocab_size})")
+                        print(f"Max token ID: {max(tokens)}")
+                        print(f"Text sample: {reversed_text[:100]}...")
+                        invalid_sequences += 1
+                        continue
+                        
+                    total_sequences += 1
+                    
+                    # Truncate if longer than max_length
+                    if len(tokens) > self.max_length:
+                        tokens = tokens[:self.max_length]
+                        truncated_sequences += 1
+                    
+                    # Ensure we have at least 2 tokens (for x and y)
+                    if len(tokens) < 2:
+                        print(f"Skipping too short sequence: {len(tokens)} tokens")
+                        continue
+                    
+                    self.examples.append(tokens)
+                    
+                except Exception as e:
+                    print(f"\nError processing sequence: {str(e)}")
+                    continue
+                    
+        print(f"\nDataset Statistics:")
         print(f"Loaded {len(self.examples)} examples")
         print(f"Truncated {truncated_sequences}/{total_sequences} sequences ({truncated_sequences/total_sequences*100:.2f}%)")
+        print(f"Invalid sequences (skipped): {invalid_sequences}")
     
     def __len__(self):
         return len(self.examples)
@@ -94,14 +114,11 @@ class InstructDataset(Dataset):
         x = torch.tensor(tokens[:-1], dtype=torch.long)
         y = torch.tensor(tokens[1:], dtype=torch.long)
         
-        # Verify shapes
+        # Final validation
         assert x.shape[0] == self.max_length - 1, f"Expected x shape {self.max_length-1}, got {x.shape[0]}"
         assert y.shape[0] == self.max_length - 1, f"Expected y shape {self.max_length-1}, got {y.shape[0]}"
-        
-        # Verify values are within vocab size
-        vocab_size = 4096  # From model config
-        assert torch.all(x < vocab_size), f"Input contains token ids >= vocab_size ({vocab_size})"
-        assert torch.all(y < vocab_size), f"Target contains token ids >= vocab_size ({vocab_size})"
+        assert torch.all(x < self.vocab_size), f"Input contains token ids >= vocab_size ({self.vocab_size})"
+        assert torch.all(y < self.vocab_size), f"Target contains token ids >= vocab_size ({self.vocab_size})"
         
         return x, y
 
