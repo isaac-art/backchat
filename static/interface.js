@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const typingIndicator = document.getElementById('typing-indicator');
 
     let currentBotMessage = null;
+    let lastWord = null;  // Track the last word we received
 
     function addUserMessage(text) {
         const messageDiv = document.createElement('div');
@@ -20,6 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
         messageDiv.textContent = '';
         messagesContainer.insertBefore(messageDiv, messagesContainer.firstChild);
         messageDiv.scrollIntoView({ behavior: 'smooth' });
+        lastWord = null;  // Reset word tracking
         return messageDiv;
     }
 
@@ -31,6 +33,51 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function hideTypingIndicator() {
         typingIndicator.style.display = 'none';
+    }
+
+    function isPunctuation(token) {
+        // Updated to include 's' and 'ies' and handle whitespace
+        const cleanToken = token.trim();
+        return /^[\s]*[.,!?:;"')\]}]+[\s]*$/.test(cleanToken) || 
+               cleanToken === 's' || 
+               cleanToken === 'ies';
+    }
+
+    function hasPunctuationEnd(token) {
+        return /[.,!?:;]$/.test(token);
+    }
+
+    function extractPunctuation(token) {
+        const match = token.match(/([^.,!?:;]+)([.,!?:;]+)$/);
+        if (match) {
+            return [match[1], match[2]];  // [word, punctuation]
+        }
+        return [token, ''];  // no punctuation
+    }
+
+    function handleNewToken(token) {
+        const cleanToken = token.trim();
+        
+        if (!currentBotMessage.textContent) {
+            // First token case
+            currentBotMessage.textContent = cleanToken;
+            lastWord = cleanToken;
+            return;
+        }
+
+        if (isPunctuation(cleanToken)) {
+            // For punctuation, attach it to the last word
+            const words = currentBotMessage.textContent.split(' ').filter(w => w);
+            if (words.length > 0) {
+                // Attach punctuation to the first word (since text is reversed)
+                words[0] = words[0] + cleanToken;
+                currentBotMessage.textContent = words.join(' ');
+            }
+        } else {
+            // For regular words, prepend with space
+            currentBotMessage.textContent = cleanToken + ' ' + currentBotMessage.textContent;
+            lastWord = cleanToken;
+        }
     }
 
     chatForm.addEventListener('submit', async (e) => {
@@ -81,8 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 for (const line of lines) {
                     if (line.startsWith('data: ')) {
                         const token = line.slice(6);
-                        // Prepend new token to the message (since we're generating backwards)
-                        currentBotMessage.textContent = token + ' ' + currentBotMessage.textContent;
+                        handleNewToken(token);
                     }
                 }
             }

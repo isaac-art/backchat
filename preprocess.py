@@ -68,20 +68,33 @@ def download(dataset: str = "tiny") -> None:
             print(f"Downloading {config['name']} dataset...")
             config['dir'].mkdir(exist_ok=True)
             
-            # Load dataset in streaming mode to handle large size
+            # Add checkpoint tracking
+            checkpoint_file = config['dir'] / "checkpoint.txt"
+            start_chunk = 0
+            if checkpoint_file.exists():
+                with open(checkpoint_file) as f:
+                    start_chunk = int(f.read().strip())
+                print(f"Resuming from chunk {start_chunk}")
+            
             ds = datasets.load_dataset(
                 "HuggingFaceFW/fineweb",
                 streaming=True,
                 split="train"
             )
             
-            # Save in chunks of 10k examples
             chunk_size = 10000
             current_chunk = []
-            chunk_idx = 0
+            chunk_idx = start_chunk
             
-            print("Processing Fineweb dataset...")
-            for item in tqdm(ds):
+            # Add progress tracking
+            processed = 0
+            print(f"Processing Fineweb dataset from chunk {chunk_idx}...")
+            
+            for item in tqdm(ds, initial=chunk_idx * chunk_size):
+                if processed < chunk_idx * chunk_size:
+                    processed += 1
+                    continue
+                    
                 if item.get('text'):
                     current_chunk.append(item['text'])
                     
@@ -89,8 +102,14 @@ def download(dataset: str = "tiny") -> None:
                     chunk_path = config['dir'] / f"chunk_{chunk_idx:05d}.txt"
                     with open(chunk_path, 'w', encoding='utf-8') as f:
                         f.write('\n'.join(current_chunk))
+                    with open(checkpoint_file, 'w') as f:
+                        f.write(str(chunk_idx))
                     current_chunk = []
                     chunk_idx += 1
+                    
+                # Optional: Add early stopping for testing
+                # if chunk_idx >= 10:  # Only process 10 chunks
+                #     break
             
             # Save any remaining examples
             if current_chunk:
@@ -242,6 +261,12 @@ if __name__ == "__main__":
         choices=["tiny", "fineweb"],
         default="tiny",
         help="Dataset to process (default: tiny)"
+    )
+    download_parser.add_argument(
+        "--max-chunks",
+        type=int,
+        help="Maximum number of chunks to process (for testing)",
+        default=None
     )
 
     # Train vocab command

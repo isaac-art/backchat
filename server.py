@@ -94,9 +94,9 @@ async def chat_stream(request: Request):
                 # Decode the single token
                 token_text = tokenizer.decode([next_token.item()])
                 if token_text.strip():  # Only yield non-empty tokens
+                    # print(token_text)
                     yield f"data: {token_text}\n\n"
-                    await asyncio.sleep(0.05)  # Add slight delay for visual effect
-                
+                    await asyncio.sleep(0.01)
                 x = torch.cat([x, next_token], dim=1)
     
     return StreamingResponse(generate(), media_type="text/event-stream") 
