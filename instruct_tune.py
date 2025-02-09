@@ -121,10 +121,12 @@ def train_step(model, batch, optimizer, grad_clip):
     x, y = batch
     
     # Add shape checks
-    print(f"Input shapes - x: {x.shape}, y: {y.shape}")
+    B, T = x.shape
+    assert T == model.config.block_size - 1, f"Expected sequence length {model.config.block_size-1}, got {T}"
     
-    logits, loss = model(x, y)
-    loss = loss.mean()
+    with torch.autocast("cuda", dtype=torch.bfloat16):
+        logits, loss = model(x, y)
+        loss = loss.mean()
     
     loss.backward()
     
@@ -155,13 +157,13 @@ def main():
     
     # Load the pre-trained model
     print("Loading pre-trained model...")
-    checkpoint = torch.load("out/best_checkpoint.pt", map_location="cuda")
-    model_config = GPTConfig(**checkpoint["model_args"])
+    checkpoint = torch.load("out/checkpoints_tiny/best_checkpoint_tiny.pt", map_location="cuda")
     
-    # Print model configuration
-    print(f"Model config: {model_config.__dict__}")
+    # Use the same configuration as the base model
+    model_args = checkpoint['model_args']
+    print(f"Model config: {model_args}")
     
-    model = GPT(model_config)
+    model = GPT(GPTConfig(**model_args))
     
     # Fix the state dict keys by removing '_orig_mod.' prefix
     state_dict = checkpoint["model"]
@@ -176,7 +178,7 @@ def main():
     model.load_state_dict(fixed_state_dict)
     model.to("cuda")
     
-    # Load tokenizer
+    # Load tokenizer - make sure it matches the vocab size from model config
     tokenizer = Tokenizer("data/tok4096.model")
     
     # Download and prepare dataset
@@ -184,7 +186,9 @@ def main():
     download_dataset()
     
     # Make sure block_size matches the model's configuration
-    full_dataset = InstructDataset(tokenizer, max_length=model_config.block_size)
+    block_size = model_args['block_size']
+    print(f"Using block size: {block_size}")
+    full_dataset = InstructDataset(tokenizer, max_length=block_size)
     
     # Print dataset info
     print(f"Loaded {len(full_dataset)} examples from Dolly dataset")
@@ -196,27 +200,30 @@ def main():
     
     print(f"Train size: {train_size}, Val size: {val_size}")
     
-    # Training configuration
+    # Training configuration - use similar settings as base training
     train_config = TrainingConfig()
-    train_config.learning_rate = 1e-5
+    train_config.learning_rate = 1e-5  # Lower learning rate for fine-tuning
     train_config.max_iters = 1000
-    train_config.batch_size = 32
+    train_config.batch_size = 32  # Smaller batch size for fine-tuning
     train_config.eval_interval = 100
     train_config.early_stop_patience = 5
+    train_config.grad_clip = 1.0  # Same as base training
     
-    # Dataloaders
+    # Dataloaders with smaller batch size for fine-tuning
     train_loader = DataLoader(
         train_dataset, 
         batch_size=train_config.batch_size, 
         shuffle=True,
-        pin_memory=True
+        pin_memory=True,
+        num_workers=0  # Avoid potential CUDA issues
     )
     
     val_loader = DataLoader(
         val_dataset,
         batch_size=train_config.batch_size,
         shuffle=False,
-        pin_memory=True
+        pin_memory=True,
+        num_workers=0
     )
     
     # Optimizer
@@ -256,7 +263,7 @@ def main():
             if val_loss < best_val_loss:
                 best_val_loss = val_loss
                 patience_counter = 0
-                save_checkpoint(model, optimizer, model_config, iter_num, val_loss, is_best=True)
+                save_checkpoint(model, optimizer, model_args, iter_num, val_loss, is_best=True)
             else:
                 patience_counter += 1
             
@@ -271,7 +278,7 @@ def main():
             pbar.set_postfix(train_loss=f"{loss:.4f}", val_loss=f"{val_loss:.4f}")
             
             # Save periodic checkpoint
-            save_checkpoint(model, optimizer, model_config, iter_num, loss)
+            save_checkpoint(model, optimizer, model_args, iter_num, loss)
             
             # Early stopping
             if patience_counter >= train_config.early_stop_patience:
@@ -288,7 +295,7 @@ def main():
     
     # Save final model
     final_val_loss = evaluate(model, val_loader, "cuda")
-    save_checkpoint(model, optimizer, model_config, train_config.max_iters, final_val_loss)
+    save_checkpoint(model, optimizer, model_args, train_config.max_iters, final_val_loss)
     
     wandb.finish()
 
