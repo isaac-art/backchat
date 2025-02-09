@@ -125,7 +125,18 @@ def main():
     checkpoint = torch.load("out/best_checkpoint.pt", map_location="cuda")
     model_config = GPTConfig(**checkpoint["model_args"])
     model = GPT(model_config)
-    model.load_state_dict(checkpoint["model"])
+    
+    # Fix the state dict keys by removing '_orig_mod.' prefix
+    state_dict = checkpoint["model"]
+    fixed_state_dict = {}
+    for k, v in state_dict.items():
+        if k.startswith('_orig_mod.'):
+            fixed_state_dict[k[10:]] = v  # Remove '_orig_mod.' prefix
+        else:
+            fixed_state_dict[k] = v
+            
+    # Load the fixed state dict
+    model.load_state_dict(fixed_state_dict)
     model.to("cuda")
     
     # Load tokenizer
