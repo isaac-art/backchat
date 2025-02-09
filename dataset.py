@@ -5,6 +5,8 @@ from pathlib import Path
 import glob
 from typing import Iterator, Tuple, List
 import os
+from torch.utils.data import Dataset, DataLoader
+from torch.nn.utils.rnn import pad_sequence
 
 # Dataset configurations
 DATASETS = {
@@ -15,6 +17,10 @@ DATASETS = {
     "owt2": {
         "name": "OpenWebText2",
         "dir": Path("data/openwebtext2"),
+    },
+    "chat": {
+        "name": "Chat",
+        "dir": Path("data/chat_tokens"),
     }
 }
 
@@ -101,21 +107,74 @@ class PreTokDataset(torch.utils.data.IterableDataset):
 
 class Task:
     @staticmethod
-    def iter_batches(
-        batch_size: int, 
-        device: str, 
-        num_workers: int = 0, 
-        dataset: str = "tiny",
-        **dataset_kwargs
-    ) -> Iterator[Tuple[torch.Tensor, torch.Tensor]]:
-        ds = PreTokDataset(**dataset_kwargs, dataset=dataset)
-        dl = torch.utils.data.DataLoader(
-            ds, 
-            batch_size=batch_size, 
-            num_workers=num_workers,
-            pin_memory=True
+    def iter_batches(batch_size, max_seq_len, split, device="cpu", num_workers=0, dataset="tiny"):
+        """Iterator for batches of data"""
+        data_dir = Path("data")
+        
+        # Determine which dataset to use
+        if dataset == "tiny":
+            pattern = str(data_dir / "*.bin")
+        elif dataset == "chat":
+            pattern = str(data_dir / "chat_tokens_*.bin")
+        else:
+            raise ValueError(f"Unknown dataset type: {dataset}")
+        
+        # Get all data files
+        data_files = sorted(glob.glob(pattern))
+        if not data_files:
+            raise FileNotFoundError(f"No data files found matching pattern: {pattern}")
+        
+        # Split into train/val
+        split_idx = int(0.9 * len(data_files))
+        train_files = data_files[:split_idx]
+        val_files = data_files[split_idx:]
+        
+        # Select files based on split
+        files = train_files if split == "train" else val_files
+        if not files:
+            raise ValueError(f"No files found for split: {split}")
+        
+        # Create dataset and dataloader
+        ds = TokenDataset(files, max_seq_len)
+        dl = DataLoader(
+            ds,
+            batch_size=batch_size,
+            pin_memory=True,
+            num_workers=num_workers
         )
-        for x, y in dl:
-            x = x.to(device, non_blocking=True)
-            y = y.to(device, non_blocking=True)
-            yield x, y
+        
+        while True:
+            for batch in dl:
+                x, y = batch
+                x = x.to(device, non_blocking=True)
+                y = y.to(device, non_blocking=True)
+                yield x, y
+
+class TokenDataset(Dataset):
+    def __init__(self, data_files, max_seq_len):
+        self.data_files = data_files
+        self.max_seq_len = max_seq_len
+        
+        # Load all data into memory
+        data = []
+        for file in data_files:
+            with open(file, 'rb') as f:
+                data.extend(np.frombuffer(f.read(), dtype=np.uint16))
+        self.data = data
+        
+        # Calculate number of sequences
+        self.num_sequences = (len(self.data) - 1) // self.max_seq_len
+        
+    def __len__(self):
+        return self.num_sequences
+    
+    def __getitem__(self, idx):
+        # Get sequence starting position
+        start_idx = idx * self.max_seq_len
+        
+        # Extract sequence
+        chunk = self.data[start_idx:start_idx + self.max_seq_len + 1]
+        x = torch.tensor(chunk[:-1], dtype=torch.long)
+        y = torch.tensor(chunk[1:], dtype=torch.long)
+        
+        return x, y
