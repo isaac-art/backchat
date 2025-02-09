@@ -10,7 +10,6 @@ from tokenizer import Tokenizer
 import wandb
 from torch.nn import functional as F
 import numpy as np
-from train import train_step  # Import train_step from the original training script
 
 # Constants
 DOLLY_URL = "https://huggingface.co/datasets/databricks/databricks-dolly-15k/resolve/main/databricks-dolly-15k.jsonl"
@@ -107,6 +106,22 @@ def save_checkpoint(model, optimizer, model_config, iter_num, loss, is_best=Fals
     for checkpoint in checkpoints[:-3]:
         checkpoint.unlink()
 
+def train_step(model, batch, optimizer, grad_clip):
+    """Single training step for instruction tuning"""
+    x, y = batch
+    logits, loss = model(x, y)
+    loss = loss.mean()
+    
+    loss.backward()
+    
+    if grad_clip != 0.0:
+        torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
+    
+    optimizer.step()
+    optimizer.zero_grad(set_to_none=True)
+    
+    return loss.item()
+
 def main():
     # Initialize wandb with the requested project name
     wandb.init(
@@ -144,8 +159,12 @@ def main():
     tokenizer = Tokenizer("data/tok4096.model")
     
     # Download and prepare dataset
+    print("Loading Dolly dataset...")  # Add explicit print for clarity
     download_dataset()
     full_dataset = InstructDataset(tokenizer, max_length=model_config.block_size)
+    
+    # Print dataset info
+    print(f"Loaded {len(full_dataset)} examples from Dolly dataset")
     
     # Split into train/val
     train_size = int(0.9 * len(full_dataset))
