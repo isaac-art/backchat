@@ -10,6 +10,7 @@ from tokenizer import Tokenizer
 import wandb
 from torch.nn import functional as F
 import numpy as np
+import os
 
 # Constants
 DOLLY_URL = "https://huggingface.co/datasets/databricks/databricks-dolly-15k/resolve/main/databricks-dolly-15k.jsonl"
@@ -33,6 +34,8 @@ class InstructDataset(Dataset):
         self.max_length = max_length
         self.examples = []
         
+        print(f"Initializing InstructDataset with max_length={max_length}")
+        
         print("Processing instruction dataset...")
         with open(INSTRUCT_FILE, 'r') as f:
             for line in tqdm(f):
@@ -53,6 +56,8 @@ class InstructDataset(Dataset):
                 tokens = self.tokenizer.encode(reversed_text, bos=True, eos=True)
                 if len(tokens) <= self.max_length:
                     self.examples.append(tokens)
+                    
+        print(f"Loaded {len(self.examples)} examples")
     
     def __len__(self):
         return len(self.examples)
@@ -66,6 +71,11 @@ class InstructDataset(Dataset):
         
         x = torch.tensor(tokens[:-1], dtype=torch.long)
         y = torch.tensor(tokens[1:], dtype=torch.long)
+        
+        # Add shape verification
+        assert x.shape[0] == self.max_length - 1, f"Expected x shape {self.max_length-1}, got {x.shape[0]}"
+        assert y.shape[0] == self.max_length - 1, f"Expected y shape {self.max_length-1}, got {y.shape[0]}"
+        
         return x, y
 
 def evaluate(model, val_loader, device):
@@ -109,6 +119,10 @@ def save_checkpoint(model, optimizer, model_config, iter_num, loss, is_best=Fals
 def train_step(model, batch, optimizer, grad_clip):
     """Single training step for instruction tuning"""
     x, y = batch
+    
+    # Add shape checks
+    print(f"Input shapes - x: {x.shape}, y: {y.shape}")
+    
     logits, loss = model(x, y)
     loss = loss.mean()
     
@@ -123,6 +137,9 @@ def train_step(model, batch, optimizer, grad_clip):
     return loss.item()
 
 def main():
+    # Set CUDA launch blocking for better error messages
+    os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
+    
     # Initialize wandb with the requested project name
     wandb.init(
         project="backgpt_instruct_tiny",
@@ -140,6 +157,10 @@ def main():
     print("Loading pre-trained model...")
     checkpoint = torch.load("out/best_checkpoint.pt", map_location="cuda")
     model_config = GPTConfig(**checkpoint["model_args"])
+    
+    # Print model configuration
+    print(f"Model config: {model_config.__dict__}")
+    
     model = GPT(model_config)
     
     # Fix the state dict keys by removing '_orig_mod.' prefix
@@ -147,10 +168,10 @@ def main():
     fixed_state_dict = {}
     for k, v in state_dict.items():
         if k.startswith('_orig_mod.'):
-            fixed_state_dict[k[10:]] = v  # Remove '_orig_mod.' prefix
+            fixed_state_dict[k[10:]] = v
         else:
             fixed_state_dict[k] = v
-            
+    
     # Load the fixed state dict
     model.load_state_dict(fixed_state_dict)
     model.to("cuda")
@@ -159,8 +180,10 @@ def main():
     tokenizer = Tokenizer("data/tok4096.model")
     
     # Download and prepare dataset
-    print("Loading Dolly dataset...")  # Add explicit print for clarity
+    print("Loading Dolly dataset...")
     download_dataset()
+    
+    # Make sure block_size matches the model's configuration
     full_dataset = InstructDataset(tokenizer, max_length=model_config.block_size)
     
     # Print dataset info
