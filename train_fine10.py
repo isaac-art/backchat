@@ -154,33 +154,18 @@ def main():
         for param_group in optimizer.param_groups:
             param_group['lr'] = lr
         
-        # Evaluate the model
-        if iter_num % train_config.eval_interval == 0:
-            losses = estimate_loss()
-            print(f"step {iter_num}: train loss {losses['train']:.4f}, val loss {losses['val']:.4f}")
-            
-            # Log metrics
-            allocated, reserved = get_gpu_memory()
-            wandb.log({
-                "train/loss": losses["train"],
-                "val/loss": losses["val"],
-                "train/lr": lr,
-                "system/gpu_memory_allocated": allocated,
-                "system/gpu_memory_reserved": reserved,
-            }, step=iter_num)
-            
-            # Save best model
-            if losses["val"] < best_val_loss:
-                best_val_loss = losses["val"]
-                save_checkpoint(model, optimizer, iter_num, best_val_loss, is_best=True)
-        
         # Forward backward update, with gradient accumulation
+        micro_losses = []  # Track losses for each micro step
         for micro_step in range(train_config.gradient_accumulation_steps):
             X, Y = next(train_batch_iter)
             with ctx:
                 logits, loss = model(X, Y)
                 loss = loss / train_config.gradient_accumulation_steps
+                micro_losses.append(loss.item() * train_config.gradient_accumulation_steps)
             scaler.scale(loss).backward()
+        
+        # Calculate average loss across micro steps
+        avg_loss = sum(micro_losses) / len(micro_losses)
         
         # Clip gradients
         if train_config.grad_clip != 0.0:
@@ -196,15 +181,42 @@ def main():
         t1 = time.time()
         dt = t1 - t0
         t0 = t1
-        
+
+        # More frequent logging of training progress
         if iter_num % train_config.log_interval == 0:
-            lossf = loss.item() * train_config.gradient_accumulation_steps
-            print(f"iter {iter_num}: loss {lossf:.4f}, time {dt*1000:.2f}ms")
+            print(f"iter {iter_num}: loss {avg_loss:.4f}, time {dt*1000:.2f}ms, lr {lr:.2e}")
             wandb.log({
-                "train/batch_loss": lossf,
+                "train/batch_loss": avg_loss,
+                "train/lr": lr,
                 "train/tokens_per_second": tokens_per_iter / dt,
+                "system/iteration_time_ms": dt * 1000,
             }, step=iter_num)
         
+        # Evaluation logging
+        if iter_num % train_config.eval_interval == 0:
+            losses = estimate_loss()
+            print(f"step {iter_num}: train loss {losses['train']:.4f}, val loss {losses['val']:.4f}")
+            
+            # Log metrics
+            allocated, reserved = get_gpu_memory()
+            wandb.log({
+                "train/loss": losses["train"],
+                "val/loss": losses["val"],
+                "train/lr": lr,
+                "system/gpu_memory_allocated": allocated,
+                "system/gpu_memory_reserved": reserved,
+            }, step=iter_num)
+            
+            writer.add_scalar("train/loss", losses["train"], iter_num)
+            writer.add_scalar("val/loss", losses["val"], iter_num)
+            writer.add_scalar("train/lr", lr, iter_num)
+            
+            # Save best model
+            if losses["val"] < best_val_loss:
+                best_val_loss = losses["val"]
+                save_checkpoint(model, optimizer, iter_num, best_val_loss, is_best=True)
+                print(f"Saved best checkpoint with val_loss {best_val_loss:.4f}")
+
         iter_num += 1
         
         # Save regular checkpoint every 2 hours
