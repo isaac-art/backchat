@@ -21,6 +21,10 @@ DATASETS = {
     "chat": {
         "name": "Chat",
         "dir": Path("data/chat_tokens"),
+    },
+    "fine10": {
+        "name": "Fine10",
+        "dir": Path("data/fine10"),
     }
 }
 
@@ -107,74 +111,75 @@ class PreTokDataset(torch.utils.data.IterableDataset):
 
 class Task:
     @staticmethod
-    def iter_batches(batch_size, max_seq_len, split, device="cpu", num_workers=0, dataset="tiny"):
-        """Iterator for batches of data"""
-        data_dir = Path("data")
+    def iter_batches(batch_size, max_seq_len, device, dataset="tiny", split="train", num_workers=0):
+        paths = {
+            "tiny": DATASETS["tiny"]["dir"],
+            "owt2": DATASETS["owt2"]["dir"],
+            "fine10": DATASETS["fine10"]["dir"],
+            "chat": DATASETS["chat"]["dir"],
+        }
         
-        # Determine which dataset to use
-        if dataset == "tiny":
-            pattern = str(data_dir / "*.bin")
-        elif dataset == "chat":
-            pattern = str(data_dir / "chat_tokens_*.bin")
-        else:
+        if dataset not in paths:
             raise ValueError(f"Unknown dataset type: {dataset}")
+            
+        data_dir = paths[dataset]
         
-        # Get all data files
-        data_files = sorted(glob.glob(pattern))
-        if not data_files:
-            raise FileNotFoundError(f"No data files found matching pattern: {pattern}")
+        # Get all .bin files for the dataset
+        bin_files = sorted(glob.glob(str(data_dir / "*.bin")))
+        if not bin_files:
+            raise ValueError(f"No .bin files found in {data_dir}")
         
         # Split into train/val
-        split_idx = int(0.9 * len(data_files))
-        train_files = data_files[:split_idx]
-        val_files = data_files[split_idx:]
+        num_val = max(1, int(len(bin_files) * 0.1))  # 10% for validation
+        train_files = bin_files[:-num_val]
+        val_files = bin_files[-num_val:]
         
-        # Select files based on split
-        files = train_files if split == "train" else val_files
+        # Select the appropriate split
+        files = train_files if split == 'train' else val_files
         if not files:
-            raise ValueError(f"No files found for split: {split}")
-        
+            raise ValueError(f"No files found for {split} split")
+            
         # Create dataset and dataloader
-        ds = TokenDataset(files, max_seq_len)
-        dl = DataLoader(
-            ds,
+        dataset = BinaryDataset(files, max_seq_len)
+        loader = DataLoader(
+            dataset,
             batch_size=batch_size,
+            shuffle=(split == 'train'),
             pin_memory=True,
             num_workers=num_workers
         )
         
         while True:
-            for batch in dl:
-                x, y = batch
-                x = x.to(device, non_blocking=True)
-                y = y.to(device, non_blocking=True)
-                yield x, y
+            for batch in loader:
+                X = batch[:, :-1].to(device)  # Input
+                Y = batch[:, 1:].to(device)   # Target
+                yield X, Y
 
-class TokenDataset(Dataset):
-    def __init__(self, data_files, max_seq_len):
-        self.data_files = data_files
+class BinaryDataset(Dataset):
+    def __init__(self, files, max_seq_len):
+        self.files = files
         self.max_seq_len = max_seq_len
+        self.vocab_size = None  # Will be set when loading data
         
-        # Load all data into memory
-        data = []
-        for file in data_files:
+        # Load and concatenate all data
+        data_chunks = []
+        for file in files:
             with open(file, 'rb') as f:
-                data.extend(np.frombuffer(f.read(), dtype=np.uint16))
-        self.data = data
+                data = np.frombuffer(f.read(), dtype=np.uint16)
+                data_chunks.append(data)
+        self.data = np.concatenate(data_chunks)
         
         # Calculate number of sequences
-        self.num_sequences = (len(self.data) - 1) // self.max_seq_len
+        self.num_sequences = (len(self.data) - 1) // max_seq_len
         
     def __len__(self):
         return self.num_sequences
-    
+        
     def __getitem__(self, idx):
-        # Get sequence starting position
+        # Get sequence starting at idx * max_seq_len
         start_idx = idx * self.max_seq_len
-        
-        # Extract sequence
         chunk = self.data[start_idx:start_idx + self.max_seq_len + 1]
-        x = torch.tensor(chunk[:-1], dtype=torch.long)
-        y = torch.tensor(chunk[1:], dtype=torch.long)
-        
-        return x, y
+        # Pad if necessary (should rarely happen)
+        if len(chunk) < self.max_seq_len + 1:
+            chunk = np.pad(chunk, (0, self.max_seq_len + 1 - len(chunk)))
+        return torch.from_numpy(chunk.astype(np.int64))
