@@ -99,6 +99,9 @@ def main():
     model = GPT(GPTConfig).to(device)
     print(f"Model parameters: {sum(p.numel() for p in model.parameters() if p.requires_grad):,}")
     
+    # Initialize scaler for mixed precision training
+    scaler = torch.cuda.amp.GradScaler(enabled=(train_config.dtype == "float16"))
+    
     # Optimizer
     optimizer = model.configure_optimizers(
         train_config.weight_decay,
@@ -177,14 +180,16 @@ def main():
             with ctx:
                 logits, loss = model(X, Y)
                 loss = loss / train_config.gradient_accumulation_steps
-            loss.backward()
+            scaler.scale(loss).backward()
         
         # Clip gradients
         if train_config.grad_clip != 0.0:
+            scaler.unscale_(optimizer)
             torch.nn.utils.clip_grad_norm_(model.parameters(), train_config.grad_clip)
         
         # Update weights
-        optimizer.step()
+        scaler.step(optimizer)
+        scaler.update()
         optimizer.zero_grad(set_to_none=True)
         
         # Timing and logging
