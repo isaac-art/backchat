@@ -78,8 +78,17 @@ def train_vocab(vocab_size: int) -> None:
     # Sample from chunks for vocab training
     chunk_files = sorted(list(FINE10_DIR.glob("chunk_*.txt")))
     with open(train_file, "w", encoding="utf-8") as out:
-        # Write special tokens first
-        for token in SPECIAL_TOKENS:
+        # Write special tokens first (excluding endoftext since it's a control symbol)
+        special_tokens_no_eos = [
+            "<|im_start|>",
+            "<|im_end|>",
+            "<|instruction|>",
+            "<|response|>",
+            "<|system|>",
+            "<|user|>",
+            "<|assistant|>"
+        ]
+        for token in special_tokens_no_eos:
             out.write(token + "\n")
         
         # Sample from data chunks
@@ -90,16 +99,13 @@ def train_vocab(vocab_size: int) -> None:
     
     print(f"\nTraining tokenizer with vocab size {vocab_size}...")
     
-    # Train with special tokens
-    user_defined_symbols = SPECIAL_TOKENS
-    
     spm.SentencePieceTrainer.train(
         input=str(train_file),
         model_prefix=str(prefix),
         model_type="bpe",
-        vocab_size=vocab_size - len(SPECIAL_TOKENS),  # Reserve space for special tokens
-        user_defined_symbols=user_defined_symbols,
-        control_symbols=["<|endoftext|>"],  # Control symbol for end of text
+        vocab_size=vocab_size - len(special_tokens_no_eos) - 1,  # -1 for endoftext
+        user_defined_symbols=special_tokens_no_eos,
+        control_symbols=["<|endoftext|>"],
         pad_id=0,
         eos_id=1,
         unk_id=2,
