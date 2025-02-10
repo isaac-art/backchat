@@ -24,10 +24,21 @@ def get_gpu_memory():
 
 def save_checkpoint(model, optimizer, iter_num, best_val_loss, is_best=False):
     """Save model checkpoint"""
+    # Convert config to a regular dictionary for serialization
+    model_args = dict(
+        n_layer=model.config.n_layer,
+        n_head=model.config.n_head,
+        n_embed=model.config.n_embed,
+        block_size=model.config.block_size,
+        bias=model.config.bias,
+        vocab_size=model.config.vocab_size,
+        dropout=model.config.dropout,
+    )
+    
     checkpoint = {
         'model': model.state_dict(),
         'optimizer': optimizer.state_dict(),
-        'model_args': model.config.__dict__,
+        'model_args': model_args,  # Use the dictionary instead of config.__dict__
         'iter_num': iter_num,
         'best_val_loss': best_val_loss,
     }
