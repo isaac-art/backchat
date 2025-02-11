@@ -1,5 +1,9 @@
 # BackChat: Exploring Alien Intelligence Through Reverse Causality in Language Models
 
+
+## good ref  https://huggingface.co/papers/2305.07759 
+
+
 ## Abstract
 [150 words]
 This paper presents BackChat, an experimental AI artwork exploring non-human cognition through reverse causality in language models. While conventional language models predict future tokens, BackChat is trained to predict previous ones, creating an entity that reasons backwards through time. This technical intervention serves as an artistic probe into alien cognition and challenges anthropocentric assumptions in AI development. Through a minimal interface inspired by concrete poetry and conceptual art, users engage with an intelligence that constructs responses by working backwards from conclusions to premises. The work contributes to discussions of AI alignment and alternative forms of intelligence, suggesting that meaningful interaction might emerge from fundamentally different cognitive architectures.

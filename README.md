@@ -32,7 +32,7 @@ python sample.py \
 ```
 
 ### Option 2: Fineweb
-A large, high-quality dataset from Common Crawl's December 2024 snapshot.
+Huggingface fineweb dataset
 
 1. **Prepare Dataset**
 ```bash
@@ -40,7 +40,7 @@ A large, high-quality dataset from Common Crawl's December 2024 snapshot.
 # 1. Download Fineweb from HuggingFace (~131GB uncompressed)
 # 2. Train tokenizer (vocab size 50,257)
 # 3. Preprocess and tokenize the data
-python preprocess.py prepare-dataset --dataset fineweb --vocab-size 50257
+python preprocess.py prepare-dataset --dataset fineweb --vocab-size 8000
 ```
 
 2. **Train Model**
@@ -78,23 +78,22 @@ Architecture:
 Trained on [Fineweb](https://huggingface.co/datasets/HuggingFaceFW/fineweb), a high-quality web content dataset.
 
 Architecture:
-- 50,257-token vocabulary (GPT-2 compatible)
+- 8000 token vocabulary 
 - 8 heads
 - 8-layer transformer
 - 512 embedding dimension
-- Training configuration optimized for L40 48GB VRAM:
+- Training for ~16 hours on H100:
+  - ~20000 steps to a loss of 2.9
   - Batch size: 128
   - Gradient accumulation steps: 3
   - Learning rate: 7e-4
   - Block size: 1024
-  - Processing time: ~8-15 hours for dataset preparation
-  - Training time: varies by hardware
+
+
 
 ## Future Work: Instruction Tuning
-After training on Fineweb, we'll create an instruction-tuned version (BackChat) similar to our TinyStories-based model, but with enhanced capabilities from the larger, more diverse training data.
-
+After training on Fineweb, we'll create an instruction-tuned version of BackGPT called BackChat
 ## BackChat
-BackChat extends the above idea by finetuning to have a chat-like instruction tuned version of the backgpt.
 
 ```
 Prompt: 
