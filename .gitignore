@@ -8,3 +8,8 @@ out/
 *.vocab
 *.npy
 
+artwork.md
+
+*.mp4
+*.mov
+*.pdf

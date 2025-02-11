@@ -77,13 +77,13 @@ async def chat_stream(request: Request):
         x = torch.tensor(input_ids, dtype=torch.long, device=DEVICE).unsqueeze(0)
         
         # Generate until EOS or max length (safety limit)
-        max_new_tokens = 200  # Increased safety limit
+        max_new_tokens = 300  # Increased safety limit
         
         for _ in range(max_new_tokens):
             with torch.no_grad():
                 with CTX:
                     logits, _ = model(x)
-                    logits = logits[:, -1, :] / 0.7  # temperature
+                    logits = logits[:, -1, :] / 0.7  # temperature - higher is more random
                     probs = torch.softmax(logits, dim=-1)
                     next_token = torch.multinomial(probs, num_samples=1)
                 
