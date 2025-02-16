@@ -2,6 +2,12 @@
 
 This is an experiment built on a fork of [smol-gpt](https://github.com/Om-Alve/smolGPT) to train a 'previous word/token' type gpt text generation instead of 'next word/token'. 
 
+
+
+![BackChat](assets/LLMA.png)
+
+
+
 ## Training Options
 
 ### Option 1: TinyStories
