@@ -4,6 +4,52 @@ document.addEventListener('DOMContentLoaded', () => {
     const userInput = document.getElementById('user-input');
     const typingIndicator = document.getElementById('typing-indicator');
 
+    // Fullscreen functionality
+    document.addEventListener('keydown', (e) => {
+        if (e.key.toLowerCase() === 'c') {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen({ navigationUI: "hide" })
+                    .catch(err => console.error(`Error attempting to enable fullscreen: ${err.message}`));
+            } else {
+                document.exitFullscreen()
+                    .catch(err => console.error(`Error attempting to exit fullscreen: ${err.message}`));
+            }
+        }
+    });
+
+    // Create ambient lights container
+    const ambientContainer = document.createElement('div');
+    ambientContainer.className = 'ambient-container';
+    document.body.appendChild(ambientContainer);
+
+    // Function to create ambient lights
+    function createAmbientLight() {
+        const light = document.createElement('div');
+        light.className = 'ambient-light';
+        
+        // Random starting position
+        const startX = Math.random() * window.innerWidth;
+        const startY = Math.random() * window.innerHeight;
+        light.style.left = `${startX}px`;
+        light.style.top = `${startY}px`;
+        
+        // Random movement
+        const moveX = (Math.random() - 0.5) * 200;
+        const moveY = (Math.random() - 0.5) * 200;
+        light.style.setProperty('--move-x', `${moveX}px`);
+        light.style.setProperty('--move-y', `${moveY}px`);
+        
+        ambientContainer.appendChild(light);
+        
+        // Remove light after animation
+        light.addEventListener('animationend', () => {
+            light.remove();
+        });
+    }
+
+    // Create new ambient light occasionally
+    setInterval(createAmbientLight, 2000);  // More frequent creation
+
     let currentBotMessage = null;
     let lastWord = null;  // Track the last word we received
 
@@ -97,12 +143,9 @@ document.addEventListener('DOMContentLoaded', () => {
         currentBotMessage = startNewBotMessage();
         showTypingIndicator();
         
-        // Move the user message after the bot message container
-        // const userMessage = messagesContainer.lastElementChild.previousElementSibling;
-        // messagesContainer.insertBefore(userMessage, currentBotMessage);
-
+        let reader = null;
+        
         try {
-            // Create POST request for server-sent events
             const response = await fetch('/chat', {
                 method: 'POST',
                 headers: {
@@ -115,7 +158,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
 
-            const reader = response.body.getReader();
+            reader = response.body.getReader();
             const decoder = new TextDecoder();
 
             while (true) {
@@ -137,7 +180,13 @@ document.addEventListener('DOMContentLoaded', () => {
             currentBotMessage.textContent = 'Error: Failed to get response';
         } finally {
             hideTypingIndicator();
-            if (reader) reader.releaseLock();
+            if (reader) {
+                try {
+                    await reader.releaseLock();
+                } catch (e) {
+                    console.error('Error releasing reader lock:', e);
+                }
+            }
         }
         
         return false;

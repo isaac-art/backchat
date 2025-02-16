@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BackChat</title>
+    <link rel="icon" type="image/png" href="/static/favicon.png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/feather-icons"></script>
     <style>
@@ -12,12 +13,14 @@
             --white: #ffffff;
             --gray-light: rgba(255, 255, 255, 0.1);
             --gray-medium: rgba(255, 255, 255, 0.05);
+            --glow-color: rgba(255, 166, 0, 0.2);
         }
 
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            cursor: crosshair;
         }
 
         body {
@@ -31,7 +34,11 @@
         .container {
             max-width: 1000px;
             margin: 0 auto;
+            margin-top: 60px;
             padding: 40px 20px;
+            position: relative;
+            z-index: 1;
+            background: var(--black);
         }
 
         h1 {
@@ -63,6 +70,13 @@
             line-height: 1.6;
             letter-spacing: -0.01em;
             border: 1px solid var(--gray-light);
+            transition: all 0.3s ease;
+            position: relative;
+            z-index: 2;
+        }
+
+        .message:hover {
+            box-shadow: 0 0 20px var(--glow-color);
         }
 
         .bot-message {
@@ -81,6 +95,7 @@
             display: none;
             padding: 20px;
             width: fit-content;
+            animation: pulse 2s ease-in-out infinite;
         }
 
         .dot {
@@ -119,11 +134,13 @@
             font-family: 'Inter', sans-serif;
             font-size: 15px;
             letter-spacing: -0.01em;
+            transition: all 0.3s ease;
         }
 
         input:focus {
             outline: none;
             border-color: var(--white);
+            box-shadow: 0 0 15px var(--glow-color);
         }
 
         input::placeholder {
@@ -139,11 +156,14 @@
             font-size: 15px;
             letter-spacing: -0.01em;
             cursor: pointer;
-            transition: opacity 0.2s ease;
+            transition: all 0.3s ease;
+            position: relative;
         }
 
         button:hover {
             opacity: 0.9;
+            box-shadow: 0 0 15px var(--glow-color);
+            transform: translateY(-2px);
         }
 
         @keyframes fadeIn {
@@ -154,6 +174,12 @@
         @keyframes blink {
             0%, 100% { opacity: 0.2; }
             20% { opacity: 1; }
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.3; }
+            50% { opacity: 0.7; }
+            100% { opacity: 0.3; }
         }
 
         /* Minimal scrollbar */
@@ -180,6 +206,13 @@
             font-size: 1.5rem;
             font-weight: 400;
             letter-spacing: -0.02em;
+            animation: float 22s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
         }
 
         .header-actions {
@@ -192,11 +225,13 @@
             padding: 8px;
             color: var(--white);
             opacity: 0.7;
-            transition: opacity 0.2s ease;
+            transition: all 0.3s ease;
         }
 
         .icon-button:hover {
             opacity: 1;
+            transform: scale(1.1);
+            box-shadow: 0 0 15px var(--glow-color);
         }
 
         /* Modal styles */
@@ -220,6 +255,19 @@
             border: 1px solid var(--gray-light);
             padding: 40px;
             position: relative;
+            transition: all 0.3s ease;
+            animation: modalFloat 0.5s ease-out;
+        }
+
+        @keyframes modalFloat {
+            from { 
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to { 
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .modal-close {
@@ -261,6 +309,48 @@
 
         .modal a:hover {
             opacity: 1;
+        }
+
+        /* Ambient lights */
+        .ambient-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 9999;
+            overflow: hidden;
+        }
+
+        .ambient-light {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: rgba(255, 166, 0, 0.8);
+            border-radius: 50%;
+            filter: blur(3px);
+            box-shadow: 0 0 10px rgba(255, 166, 0, 0.4),
+                       0 0 20px rgba(255, 166, 0, 0.2);
+            animation: float-light 6s infinite ease-in-out;
+            opacity: 0;
+        }
+
+        @keyframes float-light {
+            0% { 
+                transform: translate(0, 0);
+                opacity: 0;
+            }
+            20% { 
+                opacity: 1;
+            }
+            80% { 
+                opacity: 1;
+            }
+            100% { 
+                transform: translate(var(--move-x, 100px), var(--move-y, -100px));
+                opacity: 0;
+            }
         }
     </style>
 </head>
