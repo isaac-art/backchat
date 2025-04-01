@@ -1,13 +1,9 @@
 import os
 import time
-import math
 import wandb
 import torch
-import numpy as np
 from pathlib import Path
 from functools import partial
-from torch.nn import functional as F
-from torch.utils.tensorboard.writer import SummaryWriter
 
 from model import GPT
 from config import GPTConfig, TrainingConfig
@@ -105,8 +101,6 @@ def main():
         }
     )
     
-    # Set up logging
-    writer = SummaryWriter(log_dir=OUT_DIR / "logs_chat")
     
     # Initialize model
     torch.manual_seed(42)

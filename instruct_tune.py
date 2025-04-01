@@ -8,7 +8,6 @@ from model import GPT
 from config import GPTConfig, TrainingConfig
 from tokenizer import Tokenizer
 import wandb
-from torch.nn import functional as F
 import numpy as np
 import os
 
@@ -89,7 +88,7 @@ class InstructDataset(Dataset):
                     print(f"\nError processing sequence: {str(e)}")
                     continue
                     
-        print(f"\nDataset Statistics:")
+        print("\nDataset Statistics:")
         print(f"Loaded {len(self.examples)} examples")
         print(f"Truncated {truncated_sequences}/{total_sequences} sequences ({truncated_sequences/total_sequences*100:.2f}%)")
         print(f"Invalid sequences (skipped): {invalid_sequences}")

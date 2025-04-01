@@ -1,6 +1,5 @@
 import os
 import argparse
-import json
 from pathlib import Path
 from tqdm import tqdm
 import numpy as np
@@ -8,7 +7,6 @@ from concurrent.futures import ProcessPoolExecutor
 from functools import partial
 import sentencepiece as spm
 import datasets
-from typing import List, Dict
 
 # Constants
 DATA_DIR = Path("data")

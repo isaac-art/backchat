@@ -2,13 +2,11 @@ from model import GPT
 from config_fine10 import GPTConfig, TrainingConfig
 from functools import partial
 import time
-import math
 import os
 import torch
 from torch.utils.tensorboard.writer import SummaryWriter
 from dataset import Task
 import wandb
-import argparse
 from pathlib import Path
 
 # Constants

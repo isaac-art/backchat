@@ -9,10 +9,6 @@ from concurrent.futures import ProcessPoolExecutor
 from functools import partial
 import sentencepiece as spm
 import glob
-import zstandard as zstd
-import jsonlines
-import tarfile
-from typing import Iterator, List
 import math
 
 from tokenizer import Tokenizer

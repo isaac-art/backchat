@@ -1,0 +1,21 @@
+[project]
+name = "backgpt"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "datasets>=3.5.0",
+    "fastapi>=0.115.12",
+    "jsonlines>=4.0.0",
+    "numpy>=2.2.4",
+    "requests>=2.32.3",
+    "ruff>=0.11.2",
+    "sentencepiece>=0.2.0",
+    "tensorboard>=2.19.0",
+    "torch>=2.6.0",
+    "torchvision>=0.21.0",
+    "tqdm>=4.67.1",
+    "wandb>=0.19.8",
+    "zstandard>=0.23.0",
+]

@@ -3,7 +3,6 @@ from fastapi.responses import StreamingResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 import torch
-from pathlib import Path
 import asyncio
 from model import GPT
 from config import GPTConfig
@@ -83,7 +82,6 @@ async def chat_stream(request: Request):
         generated_tokens = []
         max_new_tokens = 300
         
-        response_text = ""
         for _ in range(max_new_tokens):
             with torch.no_grad():
                 with CTX:

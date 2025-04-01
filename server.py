@@ -1,9 +1,8 @@
 from fastapi import FastAPI, Request
-from fastapi.responses import StreamingResponse, HTMLResponse, FileResponse
+from fastapi.responses import StreamingResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 import torch
-from pathlib import Path
 import asyncio
 from model import GPT
 from config import GPTConfig
@@ -61,6 +60,10 @@ tokenizer = get_tokenizer()
 @app.get("/", response_class=HTMLResponse)
 async def root(request: Request):
     return templates.TemplateResponse("interface.html", {"request": request})
+
+@app.get("/temporal", response_class=HTMLResponse)
+async def temporal_interface(request: Request):
+    return templates.TemplateResponse("interface_nonlinear.html", {"request": request})
 
 @app.post("/chat")
 async def chat_stream(request: Request):

@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BackChat - Temporal Spiral</title>
+    <link rel="icon" type="image/png" href="/static/favicon.png">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=IBM+Plex+Serif:wght@300;400&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --black: #000000;
+            --white: #ffffff;
+            --user-color: rgba(88, 177, 159, 0.7);
+            --bot-color: rgba(177, 88, 159, 0.7);
+            --glow: rgba(88, 177, 159, 0.2);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: var(--black);
+            color: var(--white);
+            font-family: 'IBM Plex Serif', serif;
+            line-height: 1.6;
+            overflow: hidden;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .spiral-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            perspective: 1000px;
+        }
+
+        .message-spiral {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            transform-style: preserve-3d;
+        }
+
+        .message {
+            position: absolute;
+            max-width: 300px;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 2px;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            opacity: 0;
+            transform-origin: center;
+            transition: all 1s cubic-bezier(0.4, 0, 0.2, 1);
+            pointer-events: none;
+        }
+
+        .message.user {
+            border: 1px solid var(--user-color);
+            color: var(--user-color);
+        }
+
+        .message.bot {
+            border: 1px solid var(--bot-color);
+            color: var(--bot-color);
+        }
+
+        .message.active {
+            opacity: 1;
+        }
+
+        .input-field {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 600px;
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid var(--user-color);
+            color: var(--white);
+            font-family: 'Space Mono', monospace;
+            font-size: 1rem;
+            padding: 1rem;
+            text-align: center;
+            z-index: 100;
+            transition: all 0.3s ease;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: var(--white);
+            box-shadow: 0 0 20px var(--glow);
+        }
+
+        .input-field::placeholder {
+            color: rgba(255, 255, 255, 0.3);
+        }
+
+        .temporal-echo {
+            position: fixed;
+            pointer-events: none;
+            font-family: 'IBM Plex Serif', serif;
+            font-size: 0.8rem;
+            opacity: 0;
+            white-space: nowrap;
+            z-index: 0;
+            mix-blend-mode: screen;
+        }
+
+        .temporal-echo.user {
+            color: var(--user-color);
+            text-shadow: 0 0 8px var(--user-color);
+        }
+
+        .temporal-echo.bot {
+            color: var(--bot-color);
+            text-shadow: 0 0 8px var(--bot-color);
+        }
+
+        @keyframes echoFloat {
+            0% {
+                opacity: 0;
+                transform: translateY(0) scale(0.8) rotate(var(--rotation, 0deg));
+                filter: blur(0px);
+            }
+            20% {
+                opacity: 0.4;
+                transform: translateY(-20px) scale(1) rotate(var(--rotation, 0deg));
+                filter: blur(1px);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-100px) scale(1.2) rotate(var(--rotation, 0deg));
+                filter: blur(3px);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="spiral-container">
+        <div class="message-spiral" id="message-spiral"></div>
+        <input type="text" class="input-field" id="user-input" 
+               placeholder="Type into the temporal void...">
+    </div>
+
+    <script>
+        const messageSpiral = document.getElementById('message-spiral');
+        const userInput = document.getElementById('user-input');
+        let messageCount = 0;
+        const centerX = window.innerWidth / 2;
+        const centerY = window.innerHeight / 2;
+        const spiralGrowth = 30; // How much the spiral expands per message
+        const spiralSpacing = 30; // Angle between messages in degrees
+
+        function calculateSpiralPosition(index, isBot = false) {
+            // Adjust index for bot messages to appear "before" user messages
+            const adjustedIndex = isBot ? index + 0.5 : index;
+            const angle = adjustedIndex * spiralSpacing * (Math.PI / 180);
+            const radius = spiralGrowth * Math.sqrt(adjustedIndex);
+            
+            return {
+                x: Math.cos(angle) * radius,
+                y: Math.sin(angle) * radius,
+                rotation: angle * (180 / Math.PI)
+            };
+        }
+
+        function createTemporalEcho(text, isUser = false) {
+            const echo = document.createElement('div');
+            echo.className = `temporal-echo ${isUser ? 'user' : 'bot'}`;
+            echo.textContent = text;
+            
+            const angle = Math.random() * Math.PI * 2;
+            const radius = Math.random() * 200 + 100;
+            const startX = centerX + Math.cos(angle) * radius;
+            const startY = centerY + Math.sin(angle) * radius;
+            
+            echo.style.left = `${startX}px`;
+            echo.style.top = `${startY}px`;
+            echo.style.setProperty('--rotation', `${Math.random() * 360}deg`);
+            echo.style.animation = `echoFloat ${Math.random() * 1.5 + 1}s ease-out forwards`;
+            
+            document.body.appendChild(echo);
+            echo.addEventListener('animationend', () => echo.remove());
+        }
+
+        function addMessageToSpiral(text, isUser = false) {
+            const message = document.createElement('div');
+            message.className = `message ${isUser ? 'user' : 'bot'}`;
+            message.textContent = text;
+            
+            const position = calculateSpiralPosition(messageCount, !isUser);
+            
+            message.style.transform = `
+                translate(${position.x}px, ${position.y}px)
+                rotate(${position.rotation}deg)
+                translateZ(${messageCount * 10}px)
+            `;
+            
+            messageSpiral.appendChild(message);
+            messageCount++;
+            
+            // Activate message with delay
+            setTimeout(() => message.classList.add('active'), 100);
+            
+            // Create temporal echoes
+            const words = text.split(' ');
+            words.forEach((word, index) => {
+                setTimeout(() => {
+                    createTemporalEcho(word, isUser);
+                }, index * 100);
+            });
+
+            // Rotate entire spiral
+            messageSpiral.style.transform = `
+                rotateX(45deg)
+                rotateZ(${-messageCount * spiralSpacing}deg)
+            `;
+        }
+
+        userInput.addEventListener('keypress', async (e) => {
+            if (e.key === 'Enter' && userInput.value.trim()) {
+                const message = userInput.value.trim();
+                userInput.value = '';
+                
+                // Add user message to spiral
+                addMessageToSpiral(message, true);
+
+                try {
+                    const response = await fetch('/chat', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ message })
+                    });
+
+                    const reader = response.body.getReader();
+                    let accumulatedTokens = [];
+                    
+                    // Create a temporary message for streaming response
+                    const streamingMessage = document.createElement('div');
+                    streamingMessage.className = 'message bot';
+                    const position = calculateSpiralPosition(messageCount, true);
+                    streamingMessage.style.transform = `
+                        translate(${position.x}px, ${position.y}px)
+                        rotate(${position.rotation}deg)
+                        translateZ(${messageCount * 10}px)
+                    `;
+                    messageSpiral.appendChild(streamingMessage);
+                    setTimeout(() => streamingMessage.classList.add('active'), 100);
+                    messageCount++;
+                    
+                    while (true) {
+                        const { value, done } = await reader.read();
+                        if (done) break;
+                        
+                        const text = new TextDecoder().decode(value);
+                        const lines = text.split('\n');
+                        
+                        for (const line of lines) {
+                            if (line.startsWith('data: ')) {
+                                const token = line.slice(6).trim();
+                                if (token) {
+                                    accumulatedTokens.unshift(token);
+                                    streamingMessage.textContent = accumulatedTokens.join(' ');
+                                    createTemporalEcho(token, false);
+                                    await new Promise(resolve => setTimeout(resolve, 50));
+                                }
+                            }
+                        }
+                    }
+
+                    // Update spiral rotation
+                    messageSpiral.style.transform = `
+                        rotateX(45deg)
+                        rotateZ(${-messageCount * spiralSpacing}deg)
+                    `;
+
+                } catch (error) {
+                    console.error('Error:', error);
+                    addMessageToSpiral('A temporal anomaly has occurred...', false);
+                }
+            }
+        });
+
+        // Initial spiral rotation
+        messageSpiral.style.transform = 'rotateX(45deg)';
+    </script>
+</body>
+</html> 

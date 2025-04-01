@@ -200,6 +200,10 @@ while True:
     for param_group in optimizer.param_groups:
         param_group["lr"] = lr
 
+    t1 = time.time()
+    dt = t1 - t0
+    t0 = t1
+    
     if iter_num % train_config.eval_interval == 0:
         losses = estimate_loss()
         print(
@@ -258,9 +262,6 @@ while True:
     scaler.update()
     optimizer.zero_grad(set_to_none=True)
 
-    t1 = time.time()
-    dt = t1 - t0
-    t0 = t1
 
     if iter_num % train_config.log_interval == 0:
         lossf = loss.item() * train_config.gradient_accumulation_steps

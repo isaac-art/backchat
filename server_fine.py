@@ -1,9 +1,8 @@
 from fastapi import FastAPI, Request
-from fastapi.responses import StreamingResponse, HTMLResponse, FileResponse
+from fastapi.responses import StreamingResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 import torch
-from pathlib import Path
 import asyncio
 from model import GPT
 from config_fine10 import GPTConfig
