@@ -9,11 +9,20 @@ class GPTConfig:
     block_size: int = 1024
     vocab_size: int = 8888  # Fixed vocab size as specified
     n_layer: int = 12      # Larger model (GPT2-medium level)
-    n_head: int = 16       # More attention heads
-    n_embed: int = 1024    # Larger embedding dimension
+    n_head: int = 12       # More attention heads
+    n_embed: int = 768     # Larger embedding dimension
     dropout: float = 0.1   # Slightly lower dropout for larger model
     bias: bool = False     # No bias terms (better performance)
     use_rotary: bool = True  # Use rotary embeddings
+    batch_size: int = 12  # Add this line
+
+    def __init__(self):
+        self.base_batch_size = 12  # Base batch size per GPU
+
+    @property
+    def batch_size(self):
+        world_size = int(os.environ.get('WORLD_SIZE', 1))
+        return self.base_batch_size * world_size
 
 
 @dataclass
@@ -21,7 +30,7 @@ class TrainingConfig:
     def __init__(self):
         self.base_batch_size = 12  # Base batch size per GPU
         self.batch_size: int = self.base_batch_size * int(os.environ.get('WORLD_SIZE', 1))
-        self.learning_rate: float = 3e-4    # Lower learning rate for stability
+        self.learning_rate: float = 5e-4    # Lower learning rate for stability
         self.max_iters: int = 100000       # More iterations for larger dataset
         self.weight_decay: float = 1e-1
         self.beta1: float = 0.9
@@ -29,16 +38,16 @@ class TrainingConfig:
         self.grad_clip: float = 1.0
 
         self.decay_lr: bool = True
-        self.warmup_iters: int = 4000      # Longer warmup for stability
+        self.warmup_iters: int = 2000      # Longer warmup for stability
         self.lr_decay_iters: int = 100000  # Decay over full training
-        self.min_lr: float = 3e-5         # Lower minimum learning rate
+        self.min_lr: float = 5e-5         # Lower minimum learning rate
 
-        self.eval_interval: int = 250
-        self.log_interval: int = 25
+        self.eval_interval: int = 1000
+        self.log_interval: int = 10
         self.eval_iters: int = 200
         self.gradient_accumulation_steps: int = 4  # More gradient accumulation steps
 
-        self.device: str = str(torch.device("cuda" if torch.cuda.is_available() else "cpu"))
+        self.device: str = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.dtype: str = "bfloat16"  # Using bfloat16 for training stability
         self.compile: bool = True
 

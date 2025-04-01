@@ -23,6 +23,7 @@ def setup_distributed():
     return local_rank
 
 def get_batch(data, config, device_type="cuda"):
+    """Get a batch of data"""
     ix = torch.randint(len(data) - config.block_size, (config.batch_size,))
     x = torch.stack([torch.from_numpy(data[i:i+config.block_size].astype(np.int64)) for i in ix])
     y = torch.stack([torch.from_numpy(data[i+1:i+1+config.block_size].astype(np.int64)) for i in ix])
