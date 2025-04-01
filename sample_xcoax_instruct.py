@@ -1,9 +1,7 @@
-import os
 import time
 import torch
 import numpy as np
 from pathlib import Path
-from contextlib import nullcontext
 from model import GPT
 from config_xcoax import GPTConfig
 from tokenizer import Tokenizer

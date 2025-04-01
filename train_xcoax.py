@@ -4,7 +4,7 @@ from pathlib import Path
 import numpy as np
 import torch
 from torch.nn.parallel import DistributedDataParallel as DDP
-from torch.distributed import init_process_group, destroy_process_group, get_rank, get_world_size
+from torch.distributed import init_process_group, destroy_process_group
 import wandb
 from torch.cuda.amp import autocast, GradScaler
 import logging

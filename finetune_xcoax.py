@@ -1,6 +1,5 @@
 import os
 import time
-import math
 import torch
 from pathlib import Path
 import numpy as np
