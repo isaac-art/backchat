@@ -6,7 +6,7 @@ This is an experiment built on a fork of [smol-gpt](https://github.com/Om-Alve/s
 
 We have two existing versions of the model trained as proof of concept: A model trained on TinyStories, and a model trained on a small subset of huggingface's Fineweb and finetuned this with databricks Dolly dataset. 
 
-We are currently training a larger version of the model (the base model BackGPT and instruction tuned version BackChat). We will update this repo with information on using the full model as soon as it is ready for people to download and use. (Estimate early summer 2025).
+**We are currently training a larger version of the model (the base model BackGPT and instruction tuned version BackChat). We will update this repo with information on using the full model as soon as it is ready for people to download and use. (Estimate early summer 2025).**
 
 It will be later made available on our website [https://chat.thanks.fish](https://chat.thanks.fish)
 
