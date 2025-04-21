@@ -1,32 +1,16 @@
 # BackGPT & BackChat
 
-This is an experiment built on a fork of [smol-gpt](https://github.com/Om-Alve/smolGPT) to train a 'previous word/token' type gpt text generation instead of 'next word/token'. 
-
-We are currently training a larger version of the model, and will update this file with information on using this model as soon as it is ready. 
-It will be later made available on our website [https://chat.thanks.fish](https://chat.thanks.fish)
-
 ![BackChat](assets/LLMA.png)
 
-## How It Works
+This is an experiment built on a fork of [smol-gpt](https://github.com/Om-Alve/smolGPT) to train a 'previous word/token' type gpt text generation instead of 'next word/token'. 
 
-### Backwards Instruction Format
-```python
-# Original data:
-instruction = "Identity the odd one out."
-input_text = "Twitter, Instagram, Telegram"
-output = "Telegram"
+We have two existing versions of the model trained as proof of concept: A model trained on TinyStories, and a model trained on a small subset of huggingface's Fineweb and finetuned this with databricks Dolly dataset. 
 
-# Training format:
-<|im_start|><|response|>Telegram<|im_end|>
-<|im_start|><|instruction|>Twitter Instagram, Telegram out odd the Identity<|im_end|>
+We are currently training a larger version of the model (the base model BackGPT and instruction tuned version BackChat). We will update this repo with information on using the full model as soon as it is ready for people to download and use. (Estimate early summer 2025).
 
-# During inference:
-1. User provides response
-2. We reverse it: "sleeping is cat The"
-3. Format: <|im_start|><|response|>sleeping is cat The<|im_end|>
-4. Model generates reversed instruction
-5. We un-reverse the instruction for display
-```
+It will be later made available on our website [https://chat.thanks.fish](https://chat.thanks.fish)
+
+
 
 <!-- ## Citation
 If you use this please first cite the original SmolGPT repo we forked from, and then the BackChat paper:
