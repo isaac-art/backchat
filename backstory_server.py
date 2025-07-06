@@ -86,7 +86,7 @@ async def model_worker():
                 if token_text.strip():
                     generated_tokens.append(next_token.item())
                     await response_queue.put(token_text)
-                    # await asyncio.sleep(0.1)
+                    await asyncio.sleep(0.01)
                     full_response += token_text
                 x = torch.cat([x, next_token], dim=1)
             if should_save: save_conversation(user_id, user_text, full_response, is_new_chat)

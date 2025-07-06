@@ -87,6 +87,8 @@ def main():
         name=f"backgpt_fine_l{GPTConfig.n_layer}_h{GPTConfig.n_head}_e{GPTConfig.n_embed}",
     )
     
+    print("Wandb initialized")
+    
     tokens_per_iter = (
         train_config.gradient_accumulation_steps
         * train_config.batch_size
@@ -105,6 +107,7 @@ def main():
     
     # Initialize model
     model = GPT(GPTConfig).to(device)
+    print("Model initialized")
     print(f"Model parameters: {sum(p.numel() for p in model.parameters() if p.requires_grad):,}")
     
     # Initialize scaler for mixed precision training
@@ -126,6 +129,8 @@ def main():
         max_seq_len=GPTConfig.block_size,
         bin_dir=Path("data/fine"),
     )
+    
+    print("Dataset iterator created")
     
     # Training loop
     best_val_loss = float('inf')
@@ -154,7 +159,7 @@ def main():
         print("Compiling model...")
         model = torch.compile(model)
     
-    print("Starting training...")
+    print("Starting training loop")
     while True:
         # Determine and set the learning rate for this iteration
         lr = train_config.get_lr(iter_num) if train_config.decay_lr else train_config.learning_rate

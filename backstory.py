@@ -7,7 +7,7 @@ from tokenizer import BackStoryTokenizer, BACK_STORY_TOKENIZER_MODEL
 
 
 if torch.cuda.is_available(): DEVICE = "cuda"
-elif torch.backends.mps.is_available():  DEVICE = "mps"
+# elif torch.backends.mps.is_available():  DEVICE = "mps"
 else: DEVICE = "cpu"
 
 if DEVICE == "cuda":  CTX = torch.autocast(DEVICE, dtype=torch.bfloat16) 
