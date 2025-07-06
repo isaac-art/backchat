@@ -65,6 +65,7 @@ def main():
     
     # Initialize wandb with fine-specific config
     wandb.init(
+        mode="offline",
         project="backgpt",
         config={
             # Model config
