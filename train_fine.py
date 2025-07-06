@@ -171,20 +171,20 @@ def main():
         
         micro_losses = []
         for micro_step in range(train_config.gradient_accumulation_steps):
-            print(f"[DEBUG] Iter {iter_num} Micro-step {micro_step}: Loading batch...")
+            # print(f"[DEBUG] Iter {iter_num} Micro-step {micro_step}: Loading batch...")
             X, Y = next(train_batch_iter)
-            print(f"[DEBUG] Iter {iter_num} Micro-step {micro_step}: Batch loaded.")
+            # print(f"[DEBUG] Iter {iter_num} Micro-step {micro_step}: Batch loaded.")
 
-            print(f"[DEBUG] Iter {iter_num} Micro-step {micro_step}: Forward pass...")
+            # print(f"[DEBUG] Iter {iter_num} Micro-step {micro_step}: Forward pass...")
             with ctx:
                 logits, loss = model(X, Y)
                 loss = loss / train_config.gradient_accumulation_steps
                 micro_losses.append(loss.item() * train_config.gradient_accumulation_steps)
-            print(f"[DEBUG] Iter {iter_num} Micro-step {micro_step}: Forward pass done.")
+            # print(f"[DEBUG] Iter {iter_num} Micro-step {micro_step}: Forward pass done.")
 
-            print(f"[DEBUG] Iter {iter_num} Micro-step {micro_step}: Backward pass...")
+            # print(f"[DEBUG] Iter {iter_num} Micro-step {micro_step}: Backward pass...")
             scaler.scale(loss).backward()
-            print(f"[DEBUG] Iter {iter_num} Micro-step {micro_step}: Backward pass done.")
+            # print(f"[DEBUG] Iter {iter_num} Micro-step {micro_step}: Backward pass done.")
         
         avg_loss = sum(micro_losses) / len(micro_losses)
         
