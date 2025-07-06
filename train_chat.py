@@ -102,6 +102,7 @@ def main():
         },
         name=f"backgpt_chat_finetune_l{model.config.n_layer}_h{model.config.n_head}_e{model.config.n_embed}",
     )
+    print("Wandb initialized")
 
     tokens_per_iter = (
         train_config.gradient_accumulation_steps
@@ -127,6 +128,8 @@ def main():
     )
     train_batch_iter = iter_batches(split="train")
     t0 = time.time()
+
+    print("Dataset iterator created")
 
     @torch.no_grad()
     def estimate_loss():
