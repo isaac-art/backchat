@@ -158,10 +158,37 @@ def prepare_dataset(vocab_size: int = 8888, num_chunks: int = 100) -> None:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Process Fineweb-10BT dataset")
-    parser.add_argument("--vocab-size", type=int, default=8888,
-                      help="Size of vocabulary to train")
-    parser.add_argument("--num-chunks", type=int, default=100,
-                      help="Number of chunks to process")
-    
+    subparsers = parser.add_subparsers(dest="command", help="Available commands")
+
+    # Download command
+    download_parser = subparsers.add_parser("download", help="Download dataset")
+    download_parser.add_argument("--num-chunks", type=int, default=100, help="Number of chunks to download")
+
+    # Train vocab command
+    vocab_parser = subparsers.add_parser("train-vocab", help="Train tokenizer vocabulary")
+    vocab_parser.add_argument("--vocab-size", type=int, default=8888, help="Size of vocabulary to train")
+
+    # Pretokenize command
+    pretok_parser = subparsers.add_parser("pretokenize", help="Pretokenize the dataset")
+    pretok_parser.add_argument("--vocab-size", type=int, default=8888, help="Vocabulary size (for tokenizer path)")
+    pretok_parser.add_argument("--num-workers", type=int, default=4, help="Number of workers for parallel processing")
+
+    # Prepare dataset command
+    prepare_parser = subparsers.add_parser("prepare-dataset", help="Run all dataset preparation steps")
+    prepare_parser.add_argument("--vocab-size", type=int, default=8888, help="Size of vocabulary to train")
+    prepare_parser.add_argument("--num-chunks", type=int, default=100, help="Number of chunks to process")
+    prepare_parser.add_argument("--num-workers", type=int, default=4, help="Number of workers for parallel processing")
+
     args = parser.parse_args()
-    prepare_dataset(args.vocab_size, args.num_chunks) 
+
+    if args.command == "download":
+        download_dataset(args.num_chunks)
+    elif args.command == "train-vocab":
+        train_vocab(args.vocab_size)
+    elif args.command == "pretokenize":
+        pretokenize(args.vocab_size, args.num_workers)
+    elif args.command == "prepare-dataset":
+        prepare_dataset(args.vocab_size, args.num_chunks)
+        pretokenize(args.vocab_size, args.num_workers)
+    else:
+        parser.print_help() 
