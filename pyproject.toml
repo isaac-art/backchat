@@ -1,0 +1,21 @@
+[project]
+name = "backchat-server"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "datasets>=3.6.0",
+    "einops>=0.8.1",
+    "fastapi>=0.115.12",
+    "matplotlib>=3.10.3",
+    "numpy>=2.2.6",
+    "ruff>=0.11.13",
+    "sentencepiece>=0.2.0",
+    "tensorboard>=2.19.0",
+    "torch>=2.7.1",
+    "torchvision>=0.22.1",
+    "tqdm>=4.67.1",
+    "uvicorn>=0.34.3",
+    "wandb>=0.21.0",
+]
