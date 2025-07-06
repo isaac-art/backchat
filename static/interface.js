@@ -145,7 +145,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Check health every second
-    setInterval(checkHealth, 1000);
+    setInterval(checkHealth, 30000+Math.random()*1000);
     checkHealth(); // Initial check
 
     // Fullscreen functionality
