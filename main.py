@@ -83,7 +83,7 @@ async def model_worker():
                 continue
 
             # Format the chat prompt - starting with Response: since it will be reversed
-            prompt = f"Response: {user_text}\n\nInstruction: "
+            prompt = f"<|response|> {user_text} <|instruction|> "
             words = prompt.split()
             reversed_input = " ".join(words[::-1])
             input_ids = tokenizer.encode(reversed_input, bos=True, eos=False)
