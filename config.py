@@ -42,7 +42,7 @@ class TrainingConfig:
     min_lr: float = 3e-5
 
     eval_interval: int = 1000
-    log_interval: int = 100
+    log_interval: int = 10
     eval_iters: int = 200
     gradient_accumulation_steps: int = 5
 
