@@ -162,40 +162,48 @@ def main():
     
     print("Starting training loop")
     while True:
-        # Determine and set the learning rate for this iteration
+        print(f"\n[DEBUG] Iteration {iter_num} start")
+
+        # Set learning rate
         lr = train_config.get_lr(iter_num) if train_config.decay_lr else train_config.learning_rate
         for param_group in optimizer.param_groups:
             param_group['lr'] = lr
         
-        # Forward backward update, with gradient accumulation
-        micro_losses = []  # Track losses for each micro step
+        micro_losses = []
         for micro_step in range(train_config.gradient_accumulation_steps):
+            print(f"[DEBUG] Iter {iter_num} Micro-step {micro_step}: Loading batch...")
             X, Y = next(train_batch_iter)
+            print(f"[DEBUG] Iter {iter_num} Micro-step {micro_step}: Batch loaded.")
+
+            print(f"[DEBUG] Iter {iter_num} Micro-step {micro_step}: Forward pass...")
             with ctx:
                 logits, loss = model(X, Y)
                 loss = loss / train_config.gradient_accumulation_steps
                 micro_losses.append(loss.item() * train_config.gradient_accumulation_steps)
+            print(f"[DEBUG] Iter {iter_num} Micro-step {micro_step}: Forward pass done.")
+
+            print(f"[DEBUG] Iter {iter_num} Micro-step {micro_step}: Backward pass...")
             scaler.scale(loss).backward()
+            print(f"[DEBUG] Iter {iter_num} Micro-step {micro_step}: Backward pass done.")
         
-        # Calculate average loss across micro steps
         avg_loss = sum(micro_losses) / len(micro_losses)
         
-        # Clip gradients
         if train_config.grad_clip != 0.0:
+            print(f"[DEBUG] Iter {iter_num}: Clipping gradients...")
             scaler.unscale_(optimizer)
             torch.nn.utils.clip_grad_norm_(model.parameters(), train_config.grad_clip)
+            print(f"[DEBUG] Iter {iter_num}: Gradients clipped.")
         
-        # Update weights
+        print(f"[DEBUG] Iter {iter_num}: Optimizer step...")
         scaler.step(optimizer)
         scaler.update()
         optimizer.zero_grad(set_to_none=True)
+        print(f"[DEBUG] Iter {iter_num}: Optimizer step done.")
         
-        # Timing and logging
         t1 = time.time()
         dt = t1 - t0
         t0 = t1
 
-        # More frequent logging of training progress
         if iter_num % train_config.log_interval == 0:
             print(f"iter {iter_num}: loss {avg_loss:.4f}, time {dt*1000:.2f}ms, lr {lr:.2e}")
             wandb.log({
@@ -205,12 +213,12 @@ def main():
                 "system/iteration_time_ms": dt * 1000,
             }, step=iter_num)
         
-        # Evaluation logging
         if iter_num % train_config.eval_interval == 0:
+            print(f"[DEBUG] Iter {iter_num}: Starting evaluation...")
             losses = estimate_loss()
+            print(f"[DEBUG] Iter {iter_num}: Evaluation done.")
             print(f"step {iter_num}: train loss {losses['train']:.4f}, val loss {losses['val']:.4f}")
             
-            # Log metrics
             allocated, reserved = get_gpu_memory()
             wandb.log({
                 "train/loss": losses["train"],
@@ -220,23 +228,27 @@ def main():
                 "system/gpu_memory_reserved": reserved,
             }, step=iter_num)
             
-            # Save best model
             if losses["val"] < best_val_loss:
                 best_val_loss = losses["val"]
+                print(f"[DEBUG] Iter {iter_num}: Saving best checkpoint...")
                 save_checkpoint(model, optimizer, iter_num, best_val_loss, is_best=True)
-                print(f"Saved best checkpoint with val_loss {best_val_loss:.4f}")
+                print(f"[DEBUG] Iter {iter_num}: Best checkpoint saved.")
 
         iter_num += 1
         
-        # Save regular checkpoint every 2 hours
         if not hasattr(save_checkpoint, 'last_save_time'):
             save_checkpoint.last_save_time = time.time()
         if time.time() - save_checkpoint.last_save_time > 7200:
+            print(f"[DEBUG] Iter {iter_num}: Saving regular checkpoint...")
             save_checkpoint(model, optimizer, iter_num, best_val_loss)
             save_checkpoint.last_save_time = time.time()
+            print(f"[DEBUG] Iter {iter_num}: Regular checkpoint saved.")
         
         if iter_num > train_config.max_iters:
+            print(f"[DEBUG] Iter {iter_num}: Max iterations reached, breaking loop.")
             break
+
+        print(f"[DEBUG] Iteration {iter_num} end\n")
     
     # Final save
     save_checkpoint(model, optimizer, iter_num, best_val_loss)
