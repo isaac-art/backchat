@@ -134,7 +134,7 @@ async def chat_stream(request: Request):
             if token is None:
                 break
             yield f"data: {token}\n\n"
-            await asyncio.sleep(0.01)
+            # await asyncio.sleep(0.01)
     return StreamingResponse(token_stream(), media_type="text/event-stream")
 
 @app.get("/")

@@ -426,6 +426,57 @@
         button:disabled:hover {
             opacity: 0.5;
         }
+
+        .settings-toggle-row {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            justify-content: center;
+            margin-top: 16px;
+        }
+        .settings-toggle-label {
+            font-size: 15px;
+            font-weight: 500;
+            color: #aaa;
+            padding: 4px 12px;
+            border-radius: 6px;
+            background: none;
+            transition: background 0.2s, color 0.2s;
+        }
+        .settings-toggle-label.active {
+            color: #fff;
+            background: var(--glow-color);
+        }
+        .settings-toggle-box {
+            width: 54px;
+            height: 28px;
+            background: #222;
+            border: 2px solid var(--gray-light);
+            border-radius: 8px;
+            position: relative;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            transition: background 0.2s, border 0.2s;
+        }
+        .settings-toggle-box.active {
+            background: #ffa60022;
+            border-color: #ffa600;
+        }
+        .settings-toggle-slider {
+            position: absolute;
+            left: 4px;
+            top: 4px;
+            width: 20px;
+            height: 20px;
+            background: #fff;
+            border-radius: 6px;
+            transition: left 0.2s, background 0.2s;
+        }
+        .settings-toggle-box input:checked + .settings-toggle-slider {
+            left: 30px;
+            background: #ffa600;
+        }
     </style>
 </head>
 <body class="bg-gray-100">
@@ -439,6 +490,9 @@
                 <button class="icon-button" onclick="openModal('download')" title="Download">
                     <i data-feather="download"></i>
                 </button>
+                <button class="icon-button" onclick="openModal('settings')" title="Settings">
+                    <i data-feather="settings"></i>
+                </button>
             </div>
         </header>
         <form id="chat-form" onsubmit="return false;">
@@ -446,12 +500,6 @@
                 <input type="text" id="user-input" 
                        placeholder="Type your answer...">
                 <button type="submit">Send</button>
-            </div>
-            <div class="save-toggle-container">
-                <label for="save-toggle" class="save-toggle-label">
-                    <input type="checkbox" id="save-toggle" class="save-toggle">
-                    <span class="toggle-text">Save conversation</span>
-                </label>
             </div>
         </form>
         <div class="chat-container">
@@ -471,10 +519,11 @@
             <button class="modal-close" onclick="closeModal('about')">
                 <i data-feather="x"></i>
             </button>
-            <h2>About BackChat</h2>
+            <h2>About BackChat and BackStory</h2>
             <p>BackChat is an experimental AI artwork exploring non-linear causality, reverse reasoning, and alien intelligence. By training a language model to predict previous words instead of next ones, we create an entity that reasons backwards through time and causality.</p>
             <p>This project investigates questions about AI alignment and the nature of intelligence itself. Can we understand minds that reason fundamentally differently from humans? What happens when we invert the arrow of causation in machine learning?</p>
             <p>BackChat is instruction-tuned to engage in dialogue while maintaining its reverse-reasoning nature, creating conversations that challenge our assumptions about cause and effect.</p>
+            <p>BackStory is a small version trained on TinyStories dataset and writes one paragraph short stories... backwards.</p>
         </div>
     </div>
 
@@ -484,18 +533,50 @@
             <button class="modal-close" onclick="closeModal('download')">
                 <i data-feather="x"></i>
             </button>
-            <h2>Download BackChat</h2>
-            <p>The complete source code and model weights are available:</p>
+            <h2>Download BackStory</h2>
+            <p>The source code and model weights are available here:</p>
             <p>
-                <a href="https://github.com/isaac-art/backgpt" target="_blank">
+                <a href="https://github.com/isaac-art/backchat" target="_blank">
                     GitHub Repository
                 </a>
             </p>
             <p>
-                <a href="https://huggingface.co/ricochet/backchat" target="_blank">
+                <a href="https://huggingface.co/ricochet/backstory" target="_blank">
                     Model Weights on Hugging Face
                 </a>
             </p>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal('settings')">
+                <i data-feather="x"></i>
+            </button>
+            <h2>Settings</h2>
+            <div style="margin-top: 24px;">
+                <div class="settings-toggle-row">
+                    <span id="settings-not-saving-label" class="settings-toggle-label">Not Saving</span>
+                    <label class="settings-toggle-box">
+                        <input type="checkbox" id="settings-save-toggle" style="display:none;">
+                        <span class="settings-toggle-slider"></span>
+                    </label>
+                    <span id="settings-saving-label" class="settings-toggle-label">Saving</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Privacy Modal (first load) -->
+    <div id="privacy-modal" class="modal">
+        <div class="modal-content">
+            <h2>Help Improve BackChat?</h2>
+            <p style="margin-bottom: 32px;">By default, your messages are not saved. However, sharing your conversations would greatly help my PhD research into AI and language. If you're comfortable, you can allow your prompts and responses to be stored anonymously. You can change this setting at any time in the settings menu.</p>
+            <div style="display: flex; gap: 16px; justify-content: flex-end;">
+                <button id="privacy-decline" style="background: #222; color: #fff; border: 1px solid var(--gray-light);">Don't Save My Messages</button>
+                <button id="privacy-accept" style="background: var(--white); color: var(--black);">Help Research (Save Messages)</button>
+            </div>
         </div>
     </div>
 

@@ -6,6 +6,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const saveToggle = document.getElementById('save-toggle');
     const sendButton = document.querySelector('button[type="submit"]');
     const toggleText = document.querySelector('.toggle-text');
+    const savePreferenceKey = 'saveConversations';
+    const settingsModal = document.getElementById('settings-modal');
+    const settingsSaveToggle = document.getElementById('settings-save-toggle');
+    const settingsToggleText = document.getElementById('settings-toggle-text');
+    const privacyModal = document.getElementById('privacy-modal');
+    const privacyAccept = document.getElementById('privacy-accept');
+    const privacyDecline = document.getElementById('privacy-decline');
 
     // Get or create user ID from localStorage
     async function initializeUser() {
@@ -42,20 +49,66 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     initializeUser();
 
-    // Load save preference from localStorage
-    const savedPreference = localStorage.getItem('saveConversations');
-    if (savedPreference !== null) {
-        saveToggle.checked = savedPreference === 'true';
+    // Remove old save toggle logic
+    // Load save preference from localStorage, or show privacy modal if not set
+    function showPrivacyModalIfNeeded() {
+        const pref = localStorage.getItem(savePreferenceKey);
+        if (pref === null) {
+            privacyModal.style.display = 'block';
+            document.body.style.overflow = 'hidden';
+        } else {
+            privacyModal.style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+    }
+    showPrivacyModalIfNeeded();
+
+    function setSavePreference(isSaving) {
+        localStorage.setItem(savePreferenceKey, isSaving ? 'true' : 'false');
+        updateSettingsToggle();
     }
 
-    // Update save toggle text and localStorage
-    function updateSaveToggleText() {
-        const isSaving = saveToggle.checked;
-        toggleText.textContent = isSaving ? 'Saving conversations' : 'Not saving conversations';
-        localStorage.setItem('saveConversations', isSaving.toString());
+    // Privacy modal button handlers
+    privacyAccept.addEventListener('click', () => {
+        setSavePreference(true);
+        privacyModal.style.display = 'none';
+        document.body.style.overflow = 'auto';
+    });
+    privacyDecline.addEventListener('click', () => {
+        setSavePreference(false);
+        privacyModal.style.display = 'none';
+        document.body.style.overflow = 'auto';
+    });
+
+    // Settings modal logic
+    function updateSettingsToggle() {
+        if (!settingsSaveToggle || !settingsToggleText) return;
+        const isSaving = localStorage.getItem(savePreferenceKey) === 'true';
+        settingsSaveToggle.checked = isSaving;
+        settingsToggleText.textContent = isSaving ? 'Saving conversations' : 'Not saving conversations';
+        // Update visual state for custom toggle
+        const toggleBox = document.querySelector('.settings-toggle-box');
+        if (toggleBox) {
+            toggleBox.classList.toggle('active', isSaving);
+        }
+        const savingLabel = document.getElementById('settings-saving-label');
+        const notSavingLabel = document.getElementById('settings-not-saving-label');
+        if (savingLabel && notSavingLabel) {
+            if (isSaving) {
+                savingLabel.classList.add('active');
+                notSavingLabel.classList.remove('active');
+            } else {
+                savingLabel.classList.remove('active');
+                notSavingLabel.classList.add('active');
+            }
+        }
     }
-    saveToggle.addEventListener('change', updateSaveToggleText);
-    updateSaveToggleText(); // Initial state
+    if (settingsSaveToggle) {
+        settingsSaveToggle.addEventListener('change', () => {
+            setSavePreference(settingsSaveToggle.checked);
+        });
+    }
+    updateSettingsToggle();
 
     // Health check monitoring
     async function checkHealth() {
@@ -96,17 +149,17 @@ document.addEventListener('DOMContentLoaded', () => {
     checkHealth(); // Initial check
 
     // Fullscreen functionality
-    document.addEventListener('keydown', (e) => {
-        if (e && e.key && e.key.toLowerCase() === 'c') {
-            if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen({ navigationUI: "hide" })
-                    .catch(err => console.error(`Error attempting to enable fullscreen: ${err.message}`));
-            } else {
-                document.exitFullscreen()
-                    .catch(err => console.error(`Error attempting to exit fullscreen: ${err.message}`));
-            }
-        }
-    });
+    // document.addEventListener('keydown', (e) => {
+    //     if (e && e.key && e.key.toLowerCase() === 'c') {
+    //         if (!document.fullscreenElement) {
+    //             document.documentElement.requestFullscreen({ navigationUI: "hide" })
+    //                 .catch(err => console.error(`Error attempting to enable fullscreen: ${err.message}`));
+    //         } else {
+    //             document.exitFullscreen()
+    //                 .catch(err => console.error(`Error attempting to exit fullscreen: ${err.message}`));
+    //         }
+    //     }
+    // });
 
     // Create ambient lights container
     const ambientContainer = document.createElement('div');
@@ -247,6 +300,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let reader = null;
         
         try {
+            const savePref = localStorage.getItem(savePreferenceKey) === 'true';
             const response = await fetch('/chat', {
                 method: 'POST',
                 headers: {
@@ -254,7 +308,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 },
                 body: JSON.stringify({ 
                     message,
-                    save_conversation: saveToggle.checked,
+                    save_conversation: savePref,
                     user_id: userId
                 })
             });
@@ -296,4 +350,15 @@ document.addEventListener('DOMContentLoaded', () => {
         
         return false;
     });
+
+    function openModal(id) {
+        document.getElementById(`${id}-modal`).style.display = 'block';
+        document.body.style.overflow = 'hidden';
+        if (id === 'settings') {
+            updateSettingsToggle();
+        }
+    }
+
+    // Ensure settings toggle is in sync with localStorage on page load
+    updateSettingsToggle();
 }); 
