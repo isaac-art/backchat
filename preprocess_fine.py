@@ -57,7 +57,7 @@ def download_dataset(num_chunks: int = 100) -> None:
 
 def train_vocab(vocab_size: int) -> None:
     """Train tokenizer with special tokens for instruction tuning"""
-    prefix = DATA_DIR / "tokenizer.model"
+    prefix = DATA_DIR / "tokenizer"
     train_file = DATA_DIR / "fine_sample.txt"
     
     print("Preparing text for vocab training...")

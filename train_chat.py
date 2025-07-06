@@ -122,6 +122,7 @@ def main():
         Task.iter_batches,
         batch_size=train_config.batch_size,
         max_seq_len=model.config.block_size,
+        device=device,
         bin_dir=Path("data"),  # expects chat .bin files in data/
     )
     train_batch_iter = iter_batches(split="train")

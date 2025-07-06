@@ -122,6 +122,7 @@ def main():
     iter_batches = partial(
         Task.iter_batches,
         batch_size=train_config.batch_size,
+        device=device,
         max_seq_len=GPTConfig.block_size,
         bin_dir=Path("data/fine"),
     )
