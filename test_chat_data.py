@@ -20,6 +20,7 @@ def main():
         max_seq_len=MAX_SEQ_LEN,
         bin_dir=BIN_DIR,
         device=DEVICE,
+        split="train"
     )
 
     # Get one batch
