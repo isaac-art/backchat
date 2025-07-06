@@ -73,19 +73,11 @@ async def model_worker():
         # Each item is (user_text, response_queue, should_save, user_id, is_new_chat)
         user_text, response_queue, should_save, user_id, is_new_chat = await request_queue.get()
         try:
-            if DEMO_MODE:
-                response = await get_demo_response(user_text)
-                for word in response.split():
-                    await response_queue.put(word + " ")
-                    await asyncio.sleep(0.2)  # Simulate thinking time
-                await response_queue.put(None)
-                if should_save: save_conversation(user_id, user_text, response, is_new_chat)
-                continue
 
-            # Format the chat prompt - starting with Response: since it will be reversed
-            prompt = f"<|response|> {user_text} <|instruction|> "
-            words = prompt.split()
-            reversed_input = " ".join(words[::-1])
+            user_text_reversed = " ".join(user_text.split()[::-1])
+            print(user_text_reversed)
+            reversed_input = f"<|response|> {user_text_reversed} <|instruction|> " #GENERATED TEXT <|endoftext|> "
+            print(reversed_input)
             input_ids = tokenizer.encode(reversed_input, bos=True, eos=False)
             x = torch.tensor(input_ids, dtype=torch.long, device=DEVICE).unsqueeze(0)
             generated_tokens = []
@@ -105,7 +97,7 @@ async def model_worker():
                 if token_text.strip():
                     generated_tokens.append(next_token.item())
                     current_text = tokenizer.decode(generated_tokens)
-                    if "Instruction:" not in current_text:
+                    if "<|response|>" not in current_text:
                         await response_queue.put(token_text)
                         # await asyncio.sleep(0.1)
                         full_response += token_text
@@ -157,6 +149,7 @@ async def chat_stream(request: Request):
             if token is None:
                 break
             yield f"data: {token}\n\n"
+            await asyncio.sleep(0.01)
     return StreamingResponse(token_stream(), media_type="text/event-stream")
 
 @app.get("/")

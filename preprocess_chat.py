@@ -43,11 +43,9 @@ def prepare_chat_text(example):
     # context = example.get('context', '').strip()
     instruction = example['instruction'].strip()
     response = example['response'].strip()
-    
-    full_text = f"<|instruction|> {instruction} <|response|> {response} <|endoftext|>"
-
-    all_words = full_text.split()
-    reversed_text = " ".join(all_words[::-1])
+    instruction_rev = " ".join(instruction.split()[::-1])
+    response_rev = " ".join(response.split()[::-1])
+    reversed_text = f"<|response|> {response_rev} <|instruction|> {instruction_rev} <|endoftext|>"
     return reversed_text
 
 
