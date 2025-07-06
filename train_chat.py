@@ -59,7 +59,12 @@ def load_fine_checkpoint(path, device):
     checkpoint = torch.load(path, map_location=device)
     model_args = checkpoint['model_args']
     model = GPT(GPTConfig(**model_args)).to(device)
-    model.load_state_dict(checkpoint['model'])
+    state_dict = checkpoint['model']
+    unwanted_prefix = "_orig_mod."
+    for k, v in list(state_dict.items()):
+        if k.startswith(unwanted_prefix):
+            state_dict[k[len(unwanted_prefix):]] = state_dict.pop(k)
+    model.load_state_dict(state_dict)
     optimizer = model.configure_optimizers(
         weight_decay=0.1,  # or load from checkpoint if you want
         learning_rate=3e-4,
