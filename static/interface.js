@@ -82,10 +82,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Settings modal logic
     function updateSettingsToggle() {
-        if (!settingsSaveToggle || !settingsToggleText) return;
         const isSaving = localStorage.getItem(savePreferenceKey) === 'true';
         settingsSaveToggle.checked = isSaving;
-        settingsToggleText.textContent = isSaving ? 'Saving conversations' : 'Not saving conversations';
+        if (settingsToggleText) {
+            settingsToggleText.textContent = isSaving ? 'Saving conversations' : 'Not saving conversations';
+        }
         // Update visual state for custom toggle
         const toggleBox = document.querySelector('.settings-toggle-box');
         if (toggleBox) {
@@ -108,7 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
             setSavePreference(settingsSaveToggle.checked);
         });
     }
-    updateSettingsToggle();
+    
 
     // Health check monitoring
     async function checkHealth() {
@@ -145,7 +146,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Check health every second
-    setInterval(checkHealth, 30000+Math.random()*1000);
+    setInterval(checkHealth, 3000+Math.random()*100);
     checkHealth(); // Initial check
 
     // Fullscreen functionality
@@ -352,11 +353,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function openModal(id) {
+        updateSettingsToggle();
         document.getElementById(`${id}-modal`).style.display = 'block';
         document.body.style.overflow = 'hidden';
-        if (id === 'settings') {
-            updateSettingsToggle();
-        }
     }
 
     // Ensure settings toggle is in sync with localStorage on page load

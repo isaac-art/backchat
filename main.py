@@ -84,23 +84,42 @@ async def model_worker():
             full_response = ""
             max_new_tokens = MAX_NEW_TOKENS
 
+            # Generate tokens one by one up to the maximum limit
             for _ in range(max_new_tokens):
+                # Disable gradient computation for inference
                 with torch.no_grad():
+                    # Use the model context for efficient memory management
                     with CTX:
+                        # Get model predictions (logits) for the current input
                         logits, _ = model(x)
+                        # Apply temperature scaling (0.8) to control randomness
                         logits = logits[:, -1, :] / 0.8 
+                        # Convert logits to probabilities using softmax
                         probs = torch.softmax(logits, dim=-1)
+                        # Sample the next token from the probability distribution
                         next_token = torch.multinomial(probs, num_samples=1)
+                # Stop generation if end-of-sequence token is encountered
                 if next_token.item() == tokenizer.eos_id:
                     break
+                # Decode the token back to text
                 token_text = tokenizer.decode([next_token.item()])
+                # Only process non-empty tokens
                 if token_text.strip():
+                    # Add token to the list of generated tokens
                     generated_tokens.append(next_token.item())
+                    # Decode all generated tokens so far
                     current_text = tokenizer.decode(generated_tokens)
+                    # Check if we've hit the instruction marker and stop if so
+                    if "<|instruction|>" in current_text:
+                        break
+                    # Skip tokens that are part of the response marker
                     if "<|response|>" not in current_text:
+                        # Send token to response queue for streaming
                         await response_queue.put(token_text)
                         # await asyncio.sleep(0.1)
+                        # Accumulate the full response text
                         full_response += token_text
+                # Append the new token to the input sequence for next iteration
                 x = torch.cat([x, next_token], dim=1)
             
             if should_save: save_conversation(user_id, user_text, full_response, is_new_chat)    
@@ -140,6 +159,7 @@ async def chat_stream(request: Request):
     user_text = data["message"].strip()
     should_save = data.get("save_conversation", False)  # Default to False
     is_new_chat = data.get("is_new_chat", False)  # Default to False
+
     response_queue = asyncio.Queue()
     await request_queue.put((user_text, response_queue, should_save, user_id, is_new_chat))
     
@@ -149,7 +169,7 @@ async def chat_stream(request: Request):
             if token is None:
                 break
             yield f"data: {token}\n\n"
-            await asyncio.sleep(0.01)
+            await asyncio.sleep(0.1)
     return StreamingResponse(token_stream(), media_type="text/event-stream")
 
 @app.get("/")
