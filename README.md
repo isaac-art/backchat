@@ -29,3 +29,5 @@ uv run main.py
 The model and training code is modified version of [SmolGPT](https://github.com/Om-Alve/smolGPT) 
 
 A paper about this work can be found on [xCoAx](https://2025.xcoax.org/)
+
+You Thank
