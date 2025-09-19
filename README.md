@@ -22,8 +22,7 @@ uv run main.py
 ```
 
 
-<img width="1050" height="1170" alt="Screenshot 2025-07-06 at 21 26 35" src="https://github.com/user-attachments/assets/9d835ed7-926c-48a3-b26a-12a8c1241707" />
-
+<img width="1050" height="1170" alt="464757738-9d835ed7-926c-48a3-b26a-12a8c1241707" src="https://github.com/user-attachments/assets/eb5a2af5-726e-4dcb-a094-367db1a840e8" />
 
 
 The model and training code is modified version of [SmolGPT](https://github.com/Om-Alve/smolGPT) 
