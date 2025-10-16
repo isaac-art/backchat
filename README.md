@@ -24,6 +24,8 @@ uv run main.py
 
 <img width="1050" height="1170" alt="464757738-9d835ed7-926c-48a3-b26a-12a8c1241707" src="https://github.com/user-attachments/assets/eb5a2af5-726e-4dcb-a094-367db1a840e8" />
 
+![Screenshot 2025-02-12 at 13 22 28](https://github.com/user-attachments/assets/061d8e75-3f87-4280-b92d-b071ac88dfb6)
+
 
 The model and training code is modified version of [SmolGPT](https://github.com/Om-Alve/smolGPT) 
 
